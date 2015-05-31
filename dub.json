@@ -1,0 +1,9 @@
+{
+	"name": "wlang",
+	"description": "A minimal D application.",
+	"copyright": "Copyright © 2015, wildn00b",
+	"authors": ["wildn00b"],
+	"dependencies": {
+		"relationlist": "~>1.2.0"
+	}
+}
