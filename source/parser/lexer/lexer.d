@@ -159,7 +159,7 @@ private:
 		
 		else if (add!(`class`, KeywordToken)(KeywordType.CLASS)) {}
 		else if (add!(`data`, KeywordToken)(KeywordType.DATA)) {}
-		else if (add!(`typedef`, KeywordToken)(KeywordType.TYPEDEF)) {}
+		else if (add!(`alias`, KeywordToken)(KeywordType.ALIAS)) {}
 		
 		else if (add!(`const`, KeywordToken)(KeywordType.CONST)) {}
 		else if (add!(`static`, KeywordToken)(KeywordType.STATIC)) {}

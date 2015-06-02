@@ -47,7 +47,7 @@ enum KeywordType {
 
 	CLASS,
 	DATA,
-	TYPEDEF,
+	ALIAS,
 
 	CONST,
 	STATIC,
