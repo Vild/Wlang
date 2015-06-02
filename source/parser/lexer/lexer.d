@@ -10,7 +10,6 @@ class Lexer {
 public:
 	this(string data) {
 		this.data = data;
-		logger.info("Got data: ", data);
 		process();
 	}
 	
@@ -44,32 +43,29 @@ private:
 	size_t current;
 	
 	void process() {
-		logger.info("Start with processing!");
+		import std.stdio;
+		logger.info("Start with lexing!");
 		size_t lastCurrent = current;
 		while (current < data.length) {
 			lastCurrent = current;
-			logger.info("Current token: ", current + 1, " out of ", data.length);
+			write("\rCurrent token: ", current + 1, " out of ", data.length);
 			parseToken();
 			if (current == lastCurrent) {
-				logger.error("Failed to parse token ", current + 1, " --> '", data[current], "'");
+				logger.error("\rFailed to parse token ", current + 1, " --> '", data[current], "'");
 				break;
 			}
 		}
-		logger.info("End of processing!");
+		writeln();
+		logger.info("End of lexing!");
 	}
 	
 	void parseToken() {
-		if (skipWhitespace())
-			logger.info("Accepted whitespace!");
-		else if (addOperator())
-			logger.info("Accepted operator!");
-		else if (addKeyword())
-			logger.info("Accepted keyword!");
-		else if (addValue())
-			logger.info("Accepted value!");
-		else if (addSymbol())
-		logger.info("Accepted symbol!");
-	else
+		if (skipWhitespace()) {}
+		else if (addOperator()) {}
+		else if (addKeyword()) {}
+		else if (addValue()) {}
+		else if (addSymbol()) {}
+		else
 			throw new LexerSyntaxError(this, current, data.length - 1);
 	}
 	
@@ -77,7 +73,6 @@ private:
 		auto result = matchFirst(data[current..$], ctRegex!("^"~re));
 		if (result.empty)
 			return false;
-		logger.info("Regex accepted: '", result[0], "' with the valid solution of '", re, "'");
 		
 		tokens ~= new T(this, current, current + result[0].length, arg);
 		current += result[0].length;
@@ -208,6 +203,9 @@ private:
 		else if (add!(`[\+-]?0b[01]+`, ValueToken)(ValueType.BINARYINT)) {}
 		else if (add!(`[\+-]?0b[01]+l`, ValueToken)(ValueType.BINARYLONG)) {}
 
+		else if (add!(`[\+-]?(\d*\.\d+|\d+\.\d*|\d+)f`, ValueToken)(ValueType.FLOAT)) {}
+		else if (add!(`[\+-]?(\d*\.\d+|\d+\.\d*)`, ValueToken)(ValueType.DOUBLE)) {}
+
 		else if (add!(`[\+-]?\d+b`, ValueToken)(ValueType.INT)) {}
 		else if (add!(`\+?\d+ub`, ValueToken)(ValueType.UINT)) {}
 		else if (add!(`[\+-]?\d+s`, ValueToken)(ValueType.SHORT)) {}
@@ -217,9 +215,6 @@ private:
 		else if (add!(`[\+-]?\d+l`, ValueToken)(ValueType.LONG)) {}
 		else if (add!(`\+?\d+ul`, ValueToken)(ValueType.ULONG)) {}
 
-		else if (add!(`[\+-]?(\d*\.\d+|\d+\.\d*|\d+)f`, ValueToken)(ValueType.FLOAT)) {}
-		else if (add!(`[\+-]?(\d*\.\d+|\d+\.\d*)`, ValueToken)(ValueType.DOUBLE)) {}
-
 		else if (add!(`"([^"]|\\")*"`, ValueToken)(ValueType.STRING)) {}
 
 		else
@@ -228,8 +223,7 @@ private:
 	}
 
 	bool addSymbol() {
-		auto result = matchFirst(data[current..$], ctRegex!(`^[\p{L}_]+?`));
-		logger.Debug("result: ", result);
+		auto result = matchFirst(data[current..$], ctRegex!(`^[\p{L}_][\p{L}_0123456789]*`));
 		if (!result.empty) {
 			tokens ~= new SymbolToken(this, current, current + result[0].length);
 			current += result[0].length;

@@ -4,7 +4,7 @@ import std.string;
 import parser.lexer.lexer;
 
 class LexerSyntaxError : Exception {
-	public:
+public:
 	this(Lexer lexer, size_t start, size_t end) {
 		super("");
 		size_t[2] startLine = lexer.GetLinePos(start);
@@ -15,6 +15,6 @@ class LexerSyntaxError : Exception {
 			endLine[0], endLine[1], end,
 			lexer.Data()[start..end]);
 	}
-	private:
+private:
 	
 }

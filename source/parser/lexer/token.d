@@ -48,7 +48,7 @@ enum KeywordType {
 	CLASS,
 	DATA,
 	TYPEDEF,
-	
+
 	CONST,
 	STATIC,
 
@@ -96,7 +96,7 @@ enum OperatorType {
 	BRACKET_CLOSE, // )
 	SQUAREBRACKET_OPEN, // [
 	SQUAREBRACKET_CLOSE, // ]
-	
+
 	PLUS, //+
 	MINUS, //-
 	ASTERISK, //*
@@ -166,12 +166,15 @@ enum ValueType {
 
 	OCTALINT,
 	OCTALLONG,
-	
+
 	HEXINT,
 	HEXLONG,
-	
+
 	BINARYINT,
 	BINARYLONG,
+
+	FLOAT,
+	DOUBLE,
 
 	BYTE,
 	UBYTE,
@@ -181,9 +184,6 @@ enum ValueType {
 	UINT,
 	LONG,
 	ULONG,
-
-	FLOAT,
-	DOUBLE,
 
 	STRING
 }
