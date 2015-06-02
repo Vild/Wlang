@@ -26,7 +26,11 @@ public:
 		super(lexer, start, end);
 	}
 
-	@property string Symbol() { return lexer[start..end]; }
+	@property string Symbol() { return lexer.Data[start .. end]; }
+
+	override string toString() {
+		return "[SymbolToken] " ~ lexer.Data[start .. end];
+	}
 }
 
 enum KeywordType {
@@ -75,6 +79,11 @@ public:
 	}
 
 	@property KeywordType Keyword() { return keyword; }
+
+	override string toString() {
+		return "[KeywordToken] " ~ lexer.Data[start .. end];
+	}
+
 private:
 	KeywordType keyword;
 }
@@ -143,6 +152,9 @@ public:
 	}
 	@property OperatorType Operator() { return operator; }
 
+	override string toString() {
+		return "[OperatorToken] " ~ lexer.Data[start .. end];
+	}
 private:
 	OperatorType operator;
 }
@@ -152,6 +164,15 @@ enum ValueType {
 	TRUE,
 	FALSE,
 
+	OCTALINT,
+	OCTALLONG,
+	
+	HEXINT,
+	HEXLONG,
+	
+	BINARYINT,
+	BINARYLONG,
+
 	BYTE,
 	UBYTE,
 	SHORT,
@@ -160,14 +181,9 @@ enum ValueType {
 	UINT,
 	LONG,
 	ULONG,
+
 	FLOAT,
 	DOUBLE,
-	OCTALINT,
-	OCTALLONG,
-	HEXINT,
-	HEXLONG,
-	BINARYINT,
-	BINARYLONG,
 
 	STRING
 }
@@ -182,66 +198,69 @@ public:
 		import std.conv;
 
 		if (type == ValueType.TRUE) {
-			//assert(is(typeof(T) == typeof(bool)));
+			assert(is(typeof(T) == bool));
 			return true;
-		}/+ else if (type == ValueType.FALSE) {
-			assert(T is bool);
+		} else if (type == ValueType.FALSE) {
+			assert(is(typeof(T) == bool));
 			return false;
 		} else if (type == ValueType.BYTE) {
-			assert(T is byte);
+			assert(is(typeof(T) == byte));
 			return parse!T(lexer.Data[start .. end]);
 		} else if (type == ValueType.UBYTE) {
-			assert(T is ubyte);
+			assert(is(typeof(T) == ubyte));
 			return parse!T(lexer.Data[start .. end]);
 		} else if (type == ValueType.SHORT) {
-			assert(T is short);
+			assert(is(typeof(T) == short));
 			return parse!T(lexer.Data[start .. end]);
 		} else if (type == ValueType.USHORT) {
-			assert(T is ushort);
+			assert(is(typeof(T) == ushort));
 			return parse!T(lexer.Data[start .. end]);
 		} else if (type == ValueType.INT) {
-			assert(T is int);
+			assert(is(typeof(T) == int));
 			return parse!T(lexer.Data[start .. end]);
 		} else if (type == ValueType.UINT) {
-			assert(T is uint);
+			assert(is(typeof(T) == uint));
 			return parse!T(lexer.Data[start .. end]);
 		} else if (type == ValueType.LONG) {
-			assert(T is long);
+			assert(is(typeof(T) == long));
 			return parse!T(lexer.Data[start .. end]);
 		} else if (type == ValueType.ULONG) {
-			assert(T is ulong);
-			return parse!T(lexer.Data[start .. end]);
-		} else if (type == ValueType.FLOAT) {
-			assert(T is float);
-			return parse!T(lexer.Data[start .. end]);
-		} else if (type == ValueType.DOUBLE) {
-			assert(T is double);
+			assert(is(typeof(T) == ulong));
 			return parse!T(lexer.Data[start .. end]);
 		} else if (type == ValueType.OCTALINT) {
-			assert(T is int);
+			assert(is(typeof(T) == int));
 			return parse!T(lexer.Data[start .. end], 8);
 		} else if (type == ValueType.OCTALLONG) {
-			assert(T is long);
+			assert(is(typeof(T) == long));
 			return parse!T(lexer.Data[start .. end], 8);
 		} else if (type == ValueType.HEXINT) {
-			assert(T is int);
+			assert(is(typeof(T) == int));
 			return parse!T(lexer.Data[start .. end], 16);
 		} else if (type == ValueType.HEXLONG) {
-			assert(T is long);
+			assert(is(typeof(T) == long));
 			return parse!T(lexer.Data[start .. end], 16);
 		} else if (type == ValueType.BINARYINT) {
-			assert(T is int);
+			assert(is(typeof(T) == int));
 			return parse!T(lexer.Data[start .. end], 2);
 		} else if (type == ValueType.BINARYLONG) {
-			assert(T is long);
+			assert(is(typeof(T) == long));
 			return parse!T(lexer.Data[start .. end], 2);
+		} else if (type == ValueType.FLOAT) {
+			assert(is(typeof(T) == float));
+			return parse!T(lexer.Data[start .. end]);
+		} else if (type == ValueType.DOUBLE) {
+			assert(is(typeof(T) == double));
+			return parse!T(lexer.Data[start .. end]);
 		} else if (type == ValueType.STRING) {
-			assert(T is string);
+			assert(is(typeof(T) == string));
 			return lexer.Data[start .. end];
-		} +/else
+		} else
 			assert(0, "Unknown type!");
 	}
 
+	override string toString() {
+		return "[ValueToken] " ~ lexer.Data[start .. end];
+	}
 private:
 	ValueType type;
 }

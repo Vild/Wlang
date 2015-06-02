@@ -4,6 +4,7 @@
 	"copyright": "Copyright © 2015, wildn00b",
 	"authors": ["wildn00b"],
 	"dependencies": {
-		"relationlist": "~>1.2.0"
+		"relationlist": "~>1.2.0",
+		"deslog": "~>0.2.0"
 	}
 }

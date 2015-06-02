@@ -5,3 +5,4 @@ __dummy.html
 *.obj
 dub.selections.json
 dub.userprefs
+wlang

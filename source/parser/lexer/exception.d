@@ -10,9 +10,9 @@ class LexerSyntaxError : Exception {
 		size_t[2] startLine = lexer.GetLinePos(start);
 		size_t[2] endLine = lexer.GetLinePos(end);
 		
-		msg = format("Syntax error! Starting at line %d:%d, ending at %d:%d.\nLine data:\n",
-			startLine[0], startLine[1],
-			endLine[0], endLine[1], 
+		msg = format("Syntax error! Starting at line %d:%d (%d), ending at %d:%d (%d).\nLine data: %s\n",
+			startLine[0], startLine[1], start,
+			endLine[0], endLine[1], end,
 			lexer.Data()[start..end]);
 	}
 	private:
