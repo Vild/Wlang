@@ -1,10 +1,10 @@
-module parser.lexer.lexer;
+module ast.lexer.lexer;
 
-import std.container;
-import parser.lexer.exception;
-import parser.lexer.token;
-import std.regex;
+import ast.lexer.exception;
+import ast.lexer.token;
 import des.log;
+import std.container;
+import std.regex;
 
 class Lexer {
 public:
@@ -61,14 +61,17 @@ private:
 	
 	void parseToken() {
 		if (skipWhitespace()) {}
+		else if (skipComments()) {}
 		else if (addOperator()) {}
+		else if (addAttribute()) {}
+		else if (addType()) {}
 		else if (addKeyword()) {}
 		else if (addValue()) {}
 		else if (addSymbol()) {}
 		else
-			throw new LexerSyntaxError(this, current, data.length - 1);
+			throw new InvalidTokenException(this, current, data.length - 1);
 	}
-	
+
 	bool add(alias re, T, args...)(args arg) {
 		auto result = matchFirst(data[current..$], ctRegex!("^"~re));
 		if (result.empty)
@@ -78,15 +81,37 @@ private:
 		current += result[0].length;
 		return true;
 	}
+
+	bool addKeyword(alias re, T, args...)(string text, args arg) {
+		if (text != re)
+			return false;
+
+		tokens ~= new T(this, current, current + text.length, arg);
+		current += text.length;
+		return true;
+	}
 	
 	bool skipWhitespace() {
 		import core.stdc.ctype;
 		if (!data[current].isspace)
 			return false;
-		while (data[++current].isspace) {}
+		while (current < data.length && data[current].isspace)
+			current++;
 		return true;
 	}
-	
+
+	bool skipComments() {
+		auto result = matchFirst(data[current..$], ctRegex!(`^//[^\n]*`));
+		if (result.empty) {
+			result = matchFirst(data[current..$], ctRegex!(`^/\*[^(\*/)]*\*/`));
+			if (result.empty)
+				return false;
+		}
+
+		current += result[0].length;
+		return true;
+	}
+
 	bool addOperator() {
 		if (add!(`\{`, OperatorToken)(OperatorType.CURLYBRACKET_OPEN)) {}
 		else if (add!(`\}`, OperatorToken)(OperatorType.CURLYBRACKET_CLOSE)) {}
@@ -139,51 +164,89 @@ private:
 		else if (add!(`~=`, OperatorToken)(OperatorType.BIT_NOT_ASSIGN)) {}
 		else if (add!(`~`, OperatorToken)(OperatorType.BIT_NOT)) {}
 		else if (add!(`\.\.\.`, OperatorToken)(OperatorType.VARIADIC)) {}
-		else if (add!(`;`, OperatorToken)(OperatorType.SEMICOLON)) {}
+		else if (add!(`:`, OperatorToken)(OperatorType.COLON)) {}
+		else if (add!(`\?`, OperatorToken)(OperatorType.QUESTIONMARK)) {}
+
+		else if (add!(`;`, EndToken)()) {}
 		else
 			return false;
 		return true;
 	}
-	
+
+	bool addAttribute() {
+		if (add!(`^@[\p{L}_][\p{L}_0123456789]*`, AttributeToken)(AttributeType.SPECIAL)) {}
+		else {
+			auto result = matchFirst(data[current..$], ctRegex!(`^[\p{L}_][\p{L}_0123456789]*`));
+			if (result.empty)
+				return false;
+			auto text = result[0];
+
+			if (addKeyword!(`lazy`, AttributeToken)(text, AttributeType.LAZY)) {}
+
+			else if (addKeyword!(`const`, AttributeToken)(text, AttributeType.CONST)) {}
+			else if (addKeyword!(`static`, AttributeToken)(text, AttributeType.STATIC)) {}
+
+			else if (addKeyword!(`public`, AttributeToken)(text, AttributeType.PUBLIC)) {}
+			else if (addKeyword!(`private`, AttributeToken)(text, AttributeType.PRIVATE)) {}
+			else if (addKeyword!(`protected`, AttributeToken)(text, AttributeType.PROTECTED)) {}
+			else
+				return false;
+		}
+		return true;
+	}
+
+	bool addType() {
+		auto result = matchFirst(data[current..$], ctRegex!(`^[\p{L}_][\p{L}_0123456789]*`));
+		if (result.empty)
+			return false;
+		auto text = result[0];
+		
+		if (addKeyword!(`auto`, TypeToken)(text, TypeType.AUTO)) {}
+		
+		else if (addKeyword!(`bool`, TypeToken)(text, TypeType.BOOL)) {}
+		
+		else if (addKeyword!(`byte`, TypeToken)(text, TypeType.BYTE)) {}
+		else if (addKeyword!(`ubyte`, TypeToken)(text, TypeType.UBYTE)) {}
+		else if (addKeyword!(`short`, TypeToken)(text, TypeType.SHORT)) {}
+		else if (addKeyword!(`ushort`, TypeToken)(text, TypeType.USHORT)) {}
+		else if (addKeyword!(`int`, TypeToken)(text, TypeType.INT)) {}
+		else if (addKeyword!(`uint`, TypeToken)(text, TypeType.UINT)) {}
+		else if (addKeyword!(`long`, TypeToken)(text, TypeType.LONG)) {}
+		else if (addKeyword!(`ulong`, TypeToken)(text, TypeType.ULONG)) {}
+		else if (addKeyword!(`float`, TypeToken)(text, TypeType.FLOAT)) {}
+		else if (addKeyword!(`double`, TypeToken)(text, TypeType.DOUBLE)) {}
+		
+		else if (addKeyword!(`string`, TypeToken)(text, TypeType.STRING)) {}
+		else
+			return false;
+		return true;
+	}
+
 	bool addKeyword() {
-		if (add!(`if`, KeywordToken)(KeywordType.IF)) {}
-		else if (add!(`else`, KeywordToken)(KeywordType.ELSE)) {}
-		else if (add!(`for`, KeywordToken)(KeywordType.FOR)) {}
-		else if (add!(`while`, KeywordToken)(KeywordType.WHILE)) {}
-		else if (add!(`do`, KeywordToken)(KeywordType.DO)) {}
-		else if (add!(`return`, KeywordToken)(KeywordType.RETURN)) {}
-		else if (add!(`break`, KeywordToken)(KeywordType.BREAK)) {}
-		else if (add!(`switch`, KeywordToken)(KeywordType.SWITCH)) {}
-		else if (add!(`default`, KeywordToken)(KeywordType.DEFAULT)) {}
-		else if (add!(`case`, KeywordToken)(KeywordType.CASE)) {}
+		auto result = matchFirst(data[current..$], ctRegex!(`^[\p{L}_][\p{L}_0123456789]*`));
+		if (result.empty)
+			return false;
+		auto text = result[0];
+
+		if (addKeyword!(`if`, KeywordToken)(text, KeywordType.IF)) {}
+		else if (addKeyword!(`else`, KeywordToken)(text, KeywordType.ELSE)) {}
+		else if (addKeyword!(`for`, KeywordToken)(text, KeywordType.FOR)) {}
+		else if (addKeyword!(`while`, KeywordToken)(text, KeywordType.WHILE)) {}
+		else if (addKeyword!(`do`, KeywordToken)(text, KeywordType.DO)) {}
+		else if (addKeyword!(`return`, KeywordToken)(text, KeywordType.RETURN)) {}
+		else if (addKeyword!(`break`, KeywordToken)(text, KeywordType.BREAK)) {}
+		else if (addKeyword!(`switch`, KeywordToken)(text, KeywordType.SWITCH)) {}
+		else if (addKeyword!(`default`, KeywordToken)(text, KeywordType.DEFAULT)) {}
+		else if (addKeyword!(`case`, KeywordToken)(text, KeywordType.CASE)) {}
 		
-		else if (add!(`class`, KeywordToken)(KeywordType.CLASS)) {}
-		else if (add!(`data`, KeywordToken)(KeywordType.DATA)) {}
-		else if (add!(`alias`, KeywordToken)(KeywordType.ALIAS)) {}
-		
-		else if (add!(`const`, KeywordToken)(KeywordType.CONST)) {}
-		else if (add!(`static`, KeywordToken)(KeywordType.STATIC)) {}
-		
-		else if (add!(`public`, KeywordToken)(KeywordType.PUBLIC)) {}
-		else if (add!(`private`, KeywordToken)(KeywordType.PRIVATE)) {}
-		else if (add!(`protected`, KeywordToken)(KeywordType.PROTECTED)) {}
-		
-		else if (add!(`cast`, KeywordToken)(KeywordType.CAST)) {}
-		
-		else if (add!(`bool`, KeywordToken)(KeywordType.BOOL)) {}
-		
-		else if (add!(`byte`, KeywordToken)(KeywordType.BYTE)) {}
-		else if (add!(`ubyte`, KeywordToken)(KeywordType.UBYTE)) {}
-		else if (add!(`short`, KeywordToken)(KeywordType.SHORT)) {}
-		else if (add!(`ushort`, KeywordToken)(KeywordType.USHORT)) {}
-		else if (add!(`int`, KeywordToken)(KeywordType.INT)) {}
-		else if (add!(`uint`, KeywordToken)(KeywordType.UINT)) {}
-		else if (add!(`long`, KeywordToken)(KeywordType.LONG)) {}
-		else if (add!(`ulong`, KeywordToken)(KeywordType.ULONG)) {}
-		else if (add!(`float`, KeywordToken)(KeywordType.FLOAT)) {}
-		else if (add!(`double`, KeywordToken)(KeywordType.DOUBLE)) {}
-		
-		else if (add!(`string`, KeywordToken)(KeywordType.STRING)) {}
+		else if (addKeyword!(`class`, KeywordToken)(text, KeywordType.CLASS)) {}
+		else if (addKeyword!(`data`, KeywordToken)(text, KeywordType.DATA)) {}
+		else if (addKeyword!(`alias`, KeywordToken)(text, KeywordType.ALIAS)) {}
+
+		else if (addKeyword!(`cast`, KeywordToken)(text, KeywordType.CAST)) {}
+
+		else if (addKeyword!(`module`, KeywordToken)(text, KeywordType.MODULE)) {}
+		else if (addKeyword!(`import`, KeywordToken)(text, KeywordType.IMPORT)) {}
 		
 		else
 			return false;
@@ -224,12 +287,11 @@ private:
 
 	bool addSymbol() {
 		auto result = matchFirst(data[current..$], ctRegex!(`^[\p{L}_][\p{L}_0123456789]*`));
-		if (!result.empty) {
-			tokens ~= new SymbolToken(this, current, current + result[0].length);
-			current += result[0].length;
-			return true;
-		}
-		return false;
+		if (result.empty)
+			return false;
+		tokens ~= new SymbolToken(this, current, current + result[0].length);
+		current += result[0].length;
+		return true;
 	}
 }
 

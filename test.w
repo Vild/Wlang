@@ -1,7 +1,8 @@
-int main(int argc, char ** argv) {
-	int test = 0b101010;
-	float test단2 = 0.23f;
-	ulong 官話3;
-	printf("Hello %s: %d", "World", 0xDEADBEEF);
-	return 0;
+int var = 0;
+int var2;
+
+bool varBool당 = true;
+
+auto fun(T)(T obj, bool test, float fun = 1.0) {
+	int var32 = 32;
 }

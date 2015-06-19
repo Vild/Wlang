@@ -6,3 +6,7 @@ __dummy.html
 dub.selections.json
 dub.userprefs
 wlang
+wc
+*.a
+*.lex
+*.par

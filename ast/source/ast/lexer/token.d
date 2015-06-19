@@ -1,6 +1,8 @@
-module parser.lexer.token;
+module ast.lexer.token;
 
-import parser.lexer.lexer;
+import ast.lexer.lexer;
+
+import std.string;
 
 class Token {
 public:
@@ -19,75 +21,6 @@ protected:
 	size_t start, end;
 }
 
-//Variable names, Function names
-class SymbolToken : Token {
-public:
-	this(Lexer lexer, size_t start, size_t end) {
-		super(lexer, start, end);
-	}
-
-	@property string Symbol() { return lexer.Data[start .. end]; }
-
-	override string toString() {
-		return "[SymbolToken] " ~ lexer.Data[start .. end];
-	}
-}
-
-enum KeywordType {
-	IF,
-	ELSE,
-	FOR,
-	WHILE,
-	DO,
-	RETURN,
-	BREAK,
-	SWITCH,
-	DEFAULT,
-	CASE,
-
-	CLASS,
-	DATA,
-	ALIAS,
-
-	CONST,
-	STATIC,
-
-	PUBLIC,
-	PRIVATE,
-	PROTECTED,
-
-	CAST,
-
-	BOOL,
-	BYTE,
-	UBYTE,
-	SHORT,
-	USHORT,
-	INT,
-	UINT,
-	LONG,
-	ULONG,
-	FLOAT,
-	DOUBLE,
-	STRING
-}  
-class KeywordToken : Token {
-public:
-	this(Lexer lexer, size_t start, size_t end, KeywordType keyword) {
-		super(lexer, start, end);
-		this.keyword = keyword;
-	}
-
-	@property KeywordType Keyword() { return keyword; }
-
-	override string toString() {
-		return "[KeywordToken] " ~ lexer.Data[start .. end];
-	}
-
-private:
-	KeywordType keyword;
-}
-
 //Operator
 enum OperatorType {
 	CURLYBRACKET_OPEN, // {
@@ -96,7 +29,7 @@ enum OperatorType {
 	BRACKET_CLOSE, // )
 	SQUAREBRACKET_OPEN, // [
 	SQUAREBRACKET_CLOSE, // ]
-
+	
 	PLUS, //+
 	MINUS, //-
 	ASTERISK, //*
@@ -142,21 +75,103 @@ enum OperatorType {
 	BIT_NOT_ASSIGN, //~=
 	BIT_NOT, //~
 	VARIADIC, //...
-	SEMICOLON //;
+	COLON, //:
+	QUESTIONMARK //?
 }
 class OperatorToken : Token {
 public:
-	this(Lexer lexer, size_t start, size_t end, OperatorType operator) {
+	this(Lexer lexer, size_t start, size_t end, OperatorType type) {
 		super(lexer, start, end);
-		this.operator = operator;
+		this.type = type;
 	}
-	@property OperatorType Operator() { return operator; }
+
+	@property OperatorType Type() { return type; }
+
+	bool isType(OperatorType type) {
+		return this.type == type;
+	}
 
 	override string toString() {
-		return "[OperatorToken] " ~ lexer.Data[start .. end];
+		return format("[OperatorToken] Type: %s, %s", type, lexer.Data[start .. end]);
+	}
+
+private:
+	OperatorType type;
+} 
+
+//Attributes
+enum AttributeType {
+	SPECIAL,
+
+	LAZY,
+
+	CONST,
+	STATIC,
+	
+	PUBLIC,
+	PRIVATE,
+	PROTECTED,
+}
+class AttributeToken : Token {
+public:
+	this(Lexer lexer, size_t start, size_t end, AttributeType type) {
+		super(lexer, start, end);
+		this.type = type;
+	}
+	
+	@property AttributeType Type() { return type; }
+	@property string Extra() { return lexer.Data[start .. end]; }
+
+	bool isType(AttributeType type) {
+		return this.type == type;
+	}
+
+	override string toString() {
+		return format("[AttributeToken] Type: %s, %s", type, lexer.Data[start .. end]);
 	}
 private:
-	OperatorType operator;
+	AttributeType type;
+}
+
+//Types
+enum TypeType {
+	LAZY,
+	AUTO,
+	
+	BOOL,
+	
+	BYTE,
+	UBYTE,
+	SHORT,
+	USHORT,
+	INT,
+	UINT,
+	LONG,
+	ULONG,
+	FLOAT,
+	DOUBLE,
+	
+	STRING,
+}
+class TypeToken : Token {
+public:
+	this(Lexer lexer, size_t start, size_t end, TypeType type) {
+		super(lexer, start, end);
+		this.type = type;
+	}
+	
+	@property TypeType Type() { return type; }
+	@property string Extra() { return lexer.Data[start .. end]; }
+
+	bool isType(TypeType type) {
+		return this.type == type;
+	}
+
+	override string toString() {
+		return format("[TypeToken] Type: %s, %s", type, lexer.Data[start .. end]);
+	}
+private:
+	TypeType type;
 }
 
 //Values
@@ -194,7 +209,8 @@ public:
 		this.type = type;
 	}
 
-	T Get(T)() {
+	@property ValueType Type() { return type; }
+	T Extra(T)() {
 		import std.conv;
 
 		if (type == ValueType.TRUE) {
@@ -258,9 +274,85 @@ public:
 			assert(0, "Unknown type!");
 	}
 
+	bool isType(ValueType type) {
+		return this.type == type;
+	}
+
 	override string toString() {
-		return "[ValueToken] " ~ lexer.Data[start .. end];
+		return format("[ValueToken] Type: %s, %s", type, lexer.Data[start .. end]);
 	}
 private:
 	ValueType type;
+}
+
+//Keywords
+enum KeywordType {
+	//Real keywords
+	IF,
+	ELSE,
+	FOR,
+	WHILE,
+	DO,
+	RETURN,
+	BREAK,
+	SWITCH,
+	DEFAULT,
+	CASE,
+	
+	//Data container types
+	CLASS,
+	DATA,
+	ALIAS,
+
+	CAST,
+		
+	//Module system
+	MODULE,
+	IMPORT
+}  
+class KeywordToken : Token {
+public:
+	this(Lexer lexer, size_t start, size_t end, KeywordType type) {
+		super(lexer, start, end);
+		this.type = type;
+	}
+	
+	@property KeywordType Type() { return type; }
+
+	bool isType(KeywordType type) {
+		return this.type == type;
+	}
+
+	override string toString() {
+		return format("[KeywordToken] Type: %s, %s", type, lexer.Data[start .. end]);
+	}
+	
+private:
+	KeywordType type;
+}
+
+//Variable names, Function names
+class SymbolToken : Token {
+public:
+	this(Lexer lexer, size_t start, size_t end) {
+		super(lexer, start, end);
+	}
+	
+	@property string Symbol() { return lexer.Data[start .. end]; }
+	
+	override string toString() {
+		return format("[SymbolToken] %s", lexer.Data[start .. end]);
+	}
+}
+
+//;
+class EndToken : Token {
+public:
+	this(Lexer lexer, size_t start, size_t end) {
+		super(lexer, start, end);
+	}
+
+	override string toString() {
+		return format("[EndToken] %s", lexer.Data[start .. end]);
+	}
 }

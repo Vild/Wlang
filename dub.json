@@ -1,10 +1,31 @@
 {
 	"name": "wlang",
-	"description": "A minimal D application.",
-	"copyright": "Copyright © 2015, wildn00b",
-	"authors": ["wildn00b"],
+	"targetType": "none",
+	"description": "The W language parser, compiler and runtime.",
+	"copyright": "Copyright © 2015, Dan Printzell",
+	"authors": ["Dan Printzell"],
 	"dependencies": {
-		"relationlist": "~>1.2.0",
-		"deslog": "~>0.2.0"
-	}
+		"wlang:compiler": "*"
+	},
+	"subPackages": [
+		{
+			"name": "ast",
+			"targetType": "library",
+			"sourcePaths": ["ast/source"],
+			"importPaths": ["ast/source"],
+			"dependencies": {
+				"deslog": "~>0.2.0"
+			},
+		},
+		{
+			"name": "compiler",
+			"targetType": "executable",
+			"targetName": "wc",
+			"sourcePaths": ["compiler/source"],
+			"importPaths": ["compiler/source"],
+			"dependencies": {
+				"wlang:ast": "*"
+			}
+		}
+	]
 }
