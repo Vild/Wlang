@@ -50,55 +50,146 @@ private:
 
 		while(current < tokens.length) {
 			write("\rCurrent token: ", current + 1, " out of ", tokens.length);
-			getStatement(curScope);
+			Statement stmt = getStatement(Array!AttributeToken());
+			curScope.Add(stmt);
+			if (stmt.NeedEndToken)
+				match!(EndToken);
 		}
 		return true;
 	}
 
 
-	Statement getStatement(Scope curScope) {
-		Array!AttributeToken attr;
+	Statement getStatement(Array!AttributeToken parrentAttr) {
+		Array!AttributeToken attr = parrentAttr;
 		while (has!AttributeToken)
 			attr ~= get!AttributeToken[0];
+		if (auto _ = getScopeStatement(attr))
+			return _;
+		else if (auto _ = getDefinitionStatement(attr))
+			return _;
+		else if (auto _ = getCallStatement(attr))
+			return _;
 
-		if (has!(OperatorToken, OperatorType.CURLYBRACKET_OPEN)) { // {
-			get!(OperatorToken, OperatorType.CURLYBRACKET_OPEN);
-			Scope newScope = new Scope(this, attr);
-
-			while (!has!(OperatorToken, OperatorType.CURLYBRACKET_CLOSE))
-				getStatement(newScope);
-			get!(OperatorToken, OperatorType.CURLYBRACKET_CLOSE);
-			return curScope.Add(newScope);
-		} else if (has!(TypeToken, SymbolToken, EndToken)) { // auto name;
-			auto d = get!(TypeToken, "type", SymbolToken, "symbol", EndToken);
-			return curScope.Add(new VariableDefinitionStatement(this, attr, d.type, d.symbol, ValueContainer(NoData)));
-		} else if (has!(TypeToken, SymbolToken, OperatorToken, OperatorType.ASSIGN, ValueToken, EndToken)) { // auto name = value;
-			auto d = get!(TypeToken, "type", SymbolToken, "symbol", OperatorToken, OperatorType.ASSIGN, ValueToken, "value", EndToken);
-			return curScope.Add(new VariableDefinitionStatement(this, attr, d.type, d.symbol, ValueContainer(d.value)));
-		} else if (has!(TypeToken, SymbolToken, OperatorToken, OperatorType.ASSIGN, SymbolToken, EndToken)) { // auto name = name;
-			auto d = get!(TypeToken, "type", SymbolToken, "symbol", OperatorToken, OperatorType.ASSIGN, SymbolToken, "value", EndToken);
-			return curScope.Add(new VariableDefinitionStatement(this, attr, d.type, d.symbol, ValueContainer(d.value)));
-		} else if (has!(TypeToken, SymbolToken, OperatorToken, OperatorType.BRACKET_OPEN)) { // auto name(
-			auto d = get!(TypeToken, "type", SymbolToken, "symbol", OperatorToken, OperatorType.BRACKET_OPEN);
-
-			Array!Argument t1; // Tier one of arguments, could be template args
-			Array!Argument t2; // Second Tier, can only be arguments
-
-			AddArgs(t1);
-
-			match!(OperatorToken, OperatorType.BRACKET_CLOSE);
-
-			if (has!(OperatorToken, OperatorType.BRACKET_OPEN)) {
-				get!(OperatorToken);
-				AddArgs(t2);
-				match!(OperatorToken, OperatorType.BRACKET_CLOSE);
-			}
-
-			return curScope.Add(new FunctionDefinitionStatement(this, attr, d.type, d.symbol, t1, t2));
-		}
-		throw new UnknownStatementException(this, tokens, current);
+		else if (auto _ = getOperatorStatement(attr))
+			return _;
+		else if (auto _ = getValueStatement(attr))
+			return _;
+		else
+			throw new UnknownStatementException(this, tokens, current);
 	}
 
+	Statement getScopeStatement(Array!AttributeToken attr) {
+		if (has!(OperatorToken, OperatorType.CURLYBRACKET_OPEN)) {
+			get!(OperatorToken, OperatorType.CURLYBRACKET_OPEN);
+			Scope newScope = new Scope(this, attr);
+			
+			while (!has!(OperatorToken, OperatorType.CURLYBRACKET_CLOSE)) {
+				Statement stmt = getStatement(attr);
+				newScope.Add(stmt);
+				if (stmt.NeedEndToken)
+					match!(EndToken);
+			}
+
+			get!(OperatorToken, OperatorType.CURLYBRACKET_CLOSE);
+			return newScope;
+		}
+		return null;
+	}
+
+	Statement getDefinitionStatement(Array!AttributeToken attr) {
+		if (has!(TypeToken, SymbolToken)) { // auto name
+			auto d = get!(TypeToken, "type", SymbolToken, "symbol");
+
+			if (has!EndToken) //auto name;
+				return new VariableDefinitionStatement(this, attr, d.type, d.symbol, new VoidStatement(this, attr));
+			else if (has!(OperatorToken, OperatorType.ASSIGN)) {
+				get!OperatorToken;
+				return new VariableDefinitionStatement(this, attr, d.type, d.symbol, getStatement(attr));
+			} else if (has!(OperatorToken, OperatorType.BRACKET_OPEN)) {
+				get!OperatorToken;
+
+				Array!Argument t1; // Tier one of arguments, could be template args
+				Array!Argument t2; // Second Tier, can only be arguments
+				
+				AddArgsDefinition(t1, attr);
+				
+				match!(OperatorToken, OperatorType.BRACKET_CLOSE);
+				
+				if (has!(OperatorToken, OperatorType.BRACKET_OPEN)) {
+					get!(OperatorToken);
+					AddArgsDefinition(t2, attr);
+					match!(OperatorToken, OperatorType.BRACKET_CLOSE);
+				}
+				
+				if (t2.length) // has both arguments and template
+					return new FunctionDefinitionStatement(this, attr, d.type, d.symbol, t1, t2);
+				else // has only arguments, t1 = arguments, t2 = empty
+					return new FunctionDefinitionStatement(this, attr, d.type, d.symbol, t2, t1);
+			} else
+				throw new UnknownStatementException(this, tokens, current);
+		}
+		return null;
+	}
+
+	Statement getCallStatement(Array!AttributeToken attr) {
+		Array!Statement t;
+		Array!Statement args;
+		if (has!(SymbolToken, OperatorToken, OperatorType.LOG_NOT)) { // name!(T)(args);
+			auto symbol = get!(SymbolToken, "symbol", OperatorToken).symbol;
+			if (has!(OperatorToken, OperatorType.BRACKET_OPEN)) {
+				get!(OperatorToken);
+				AddArgsValue(t, attr);
+				match!(OperatorToken, OperatorType.BRACKET_CLOSE);
+			} else {
+				if (auto _ = getOperatorStatement(attr)) //CHEAT CHEAT
+					t ~= _;
+				else if (auto _ = getValueStatement(attr))
+					t ~= _;
+				else
+					throw new UnknownStatementException(this, tokens, current);
+			}
+
+			match!(OperatorToken, OperatorType.BRACKET_OPEN);
+			AddArgsValue(args, attr);
+			match!(OperatorToken, OperatorType.BRACKET_CLOSE);
+			return new FunctionCallStatement(this, attr, symbol, t, args);
+		} else if (has!(SymbolToken, OperatorToken, OperatorType.BRACKET_OPEN)) { // name(args);
+			auto symbol = get!(SymbolToken, "symbol", OperatorToken).symbol;
+			AddArgsValue(args, attr);
+			match!(OperatorToken, OperatorType.BRACKET_CLOSE);
+			return new FunctionCallStatement(this, attr, symbol, t, args);
+		}
+		return null;
+	}
+
+	Statement getOperatorStatement(Array!AttributeToken attr) {
+		//Handles "pre-operators" like !true
+		if (has!(OperatorToken, OperatorType.BRACKET_OPEN)) {
+			get!OperatorToken;
+			Statement stmt = new ValueContainerStatement(this, attr, getStatement(attr));
+			match!(OperatorToken, OperatorType.BRACKET_CLOSE);
+			return stmt;
+		} else if (has!(OperatorToken, OperatorType.LOG_NOT)) {
+			get!OperatorToken;
+			return new NotStatement(this, attr, getStatement(attr));
+		}
+		return null;
+	}
+
+	Statement getValueStatement(Array!AttributeToken attr) {
+		Statement stmt = null;
+		if (has!(ValueToken))
+			stmt = new ValueStatement(this, attr, get!(ValueToken, "value").value);
+		else if (has!(SymbolToken))
+			stmt = new SymbolStatement(this, attr, get!(SymbolToken, "symbol").symbol);
+		if (stmt) {
+			if (has!(OperatorToken, OperatorType.PLUS)) {
+				get!OperatorToken;
+				return new PlusStatement(this, attr, stmt, getStatement(attr));
+			}
+		}
+		return stmt;
+	}
 
 	bool has(pattern...)() {
 		mixin(genericPeekImpl!("return false;", "", pattern));
@@ -176,7 +267,7 @@ private:
 		return ret;
 	}
 
-	void AddArgs(ref Array!Argument list) {
+	void AddArgsDefinition(ref Array!Argument list, Array!AttributeToken attr) {
 		while (true) {
 			if (has!(OperatorToken, OperatorType.BRACKET_CLOSE))
 				break;
@@ -195,14 +286,9 @@ private:
 			
 			if (has!(OperatorToken, OperatorType.ASSIGN)) {
 				get!(OperatorToken, OperatorType.ASSIGN);
-				if (has!ValueToken)
-					arg.value = ValueContainer(get!(ValueToken, "value").value);
-				else if (has!SymbolToken)
-					arg.value = ValueContainer(get!(SymbolToken, "value").value);
-				else
-					throw new UnknownStatementException(this, tokens, current);
+				arg.defaultValue = getStatement(attr);
 			} else
-				arg.value = ValueContainer(NoData);
+				arg.defaultValue = new VoidStatement(this, attr);
 			
 			list ~= arg;
 			if (!has!(OperatorToken, OperatorType.COMMA))
@@ -211,5 +297,17 @@ private:
 		}
 	}
 
+	void AddArgsValue(ref Array!Statement list, Array!AttributeToken attr) {
+		while (true) {
+			if (has!(OperatorToken, OperatorType.BRACKET_CLOSE))
+				break;
+			
+			list ~= getStatement(attr);
+			
+			if (!has!(OperatorToken, OperatorType.COMMA))
+				break;
+			get!(OperatorToken, OperatorType.COMMA);
+		}
+	}
 }
 

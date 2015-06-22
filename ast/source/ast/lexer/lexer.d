@@ -5,11 +5,12 @@ import ast.lexer.token;
 import des.log;
 import std.container;
 import std.regex;
+import std.array;
 
 class Lexer {
 public:
 	this(string data) {
-		this.data = data;
+		this.data = data.replace("\t", " "); //TODO: Fix this silly hack for GetDataPos
 		process();
 	}
 	
@@ -17,23 +18,45 @@ public:
 	@property Array!Token Tokens() { return tokens; } 
 	
 	size_t[2] GetLinePos(size_t index) {
-		size_t row = 0 + 1; /* because human counting */
+		size_t row = 0;
 		size_t column = 0;
 		
-		logger.info("index: ", index, " data.length: ", data.length);
 		if (index >= data.length)
 			return [-1, -1];
 		
 		//Calculate the row and column number for the index
-		for (int i = 0; i < index; i++)
-		if (data[i] == '\n') {
-			row++;
-			column = 0;
-			continue;
-		} else 
-			column++;
-		
+		for (size_t i = 0; i < index; i++)
+			if (data[i] == '\n') {
+				row++;
+				column = 0;
+			} else 
+				column++;
+			
 		return [row, column];
+	}
+
+	size_t GetDataPos(size_t[2] pos) {
+		size_t row = 0;
+		size_t column = 0;
+		import std.stdio;		
+		//Calculate the row and column number for the index
+		for (size_t i = 0; i < data.length; i++) {
+			if (row == pos[0] && column == pos[1])
+				return i;
+			else if (row > pos[0]) {
+				writefln("\nMoved past the point: %s, i: %s, row: %s, column: %s", pos, i, row, column);
+				return -1;
+			}
+
+			if (data[i] == '\n') {
+				row++;
+				column = 0;
+			} else 
+				column++;
+		}
+
+		writefln("\nPos is out of file: %s", pos);
+		return -1;
 	}
 	
 private:
@@ -286,7 +309,113 @@ private:
 	}
 
 	bool addSymbol() {
-		auto result = matchFirst(data[current..$], ctRegex!(`^[\p{L}_][\p{L}_0123456789]*`));
+		enum blocks = `\p{L}` ~
+//`\p{InBasic_Latin}` ~
+`\p{InLatin-1_Supplement}` ~
+`\p{InLatin_Extended-A}` ~
+`\p{InLatin_Extended-B}` ~
+`\p{InIPA_Extensions}` ~
+`\p{InSpacing_Modifier_Letters}` ~
+`\p{InCombining_Diacritical_Marks}` ~
+`\p{InGreek_and_Coptic}` ~
+`\p{InCyrillic}` ~
+//`\p{InCyrillic_Supplementary}` ~
+`\p{InArmenian}` ~
+`\p{InHebrew}` ~
+`\p{InArabic}` ~
+`\p{InSyriac}` ~
+`\p{InThaana}` ~
+`\p{InDevanagari}` ~
+`\p{InBengali}` ~
+`\p{InGurmukhi}` ~
+`\p{InGujarati}` ~
+`\p{InOriya}` ~
+`\p{InTamil}` ~
+`\p{InTelugu}` ~
+`\p{InKannada}` ~
+`\p{InMalayalam}` ~
+`\p{InSinhala}` ~
+`\p{InThai}` ~
+`\p{InLao}` ~
+`\p{InTibetan}` ~
+`\p{InMyanmar}` ~
+`\p{InGeorgian}` ~
+`\p{InHangul_Jamo}` ~
+`\p{InEthiopic}` ~
+`\p{InCherokee}` ~
+`\p{InUnified_Canadian_Aboriginal_Syllabics}` ~
+`\p{InOgham}` ~
+`\p{InRunic}` ~
+`\p{InTagalog}` ~
+`\p{InHanunoo}` ~
+`\p{InBuhid}` ~
+`\p{InTagbanwa}` ~
+`\p{InKhmer}` ~
+`\p{InMongolian}` ~
+`\p{InLimbu}` ~
+`\p{InTai_Le}` ~
+`\p{InKhmer_Symbols}` ~
+`\p{InPhonetic_Extensions}` ~
+`\p{InLatin_Extended_Additional}` ~
+`\p{InGreek_Extended}` ~
+//`\p{InGeneral_Punctuation}` ~
+`\p{InSuperscripts_and_Subscripts}` ~
+`\p{InCurrency_Symbols}` ~
+`\p{InCombining_Diacritical_Marks_for_Symbols}` ~
+`\p{InLetterlike_Symbols}` ~
+`\p{InNumber_Forms}` ~
+`\p{InArrows}` ~
+`\p{InMathematical_Operators}` ~
+`\p{InMiscellaneous_Technical}` ~
+`\p{InControl_Pictures}` ~
+`\p{InOptical_Character_Recognition}` ~
+`\p{InEnclosed_Alphanumerics}` ~
+`\p{InBox_Drawing}` ~
+`\p{InBlock_Elements}` ~
+`\p{InGeometric_Shapes}` ~
+`\p{InMiscellaneous_Symbols}` ~
+`\p{InDingbats}` ~
+`\p{InMiscellaneous_Mathematical_Symbols-A}` ~
+`\p{InSupplemental_Arrows-A}` ~
+`\p{InBraille_Patterns}` ~
+`\p{InSupplemental_Arrows-B}` ~
+`\p{InMiscellaneous_Mathematical_Symbols-B}` ~
+`\p{InSupplemental_Mathematical_Operators}` ~
+`\p{InMiscellaneous_Symbols_and_Arrows}` ~
+`\p{InCJK_Radicals_Supplement}` ~
+`\p{InKangxi_Radicals}` ~
+`\p{InIdeographic_Description_Characters}` ~
+`\p{InCJK_Symbols_and_Punctuation}` ~
+`\p{InHiragana}` ~
+`\p{InKatakana}` ~
+`\p{InBopomofo}` ~
+`\p{InHangul_Compatibility_Jamo}` ~
+`\p{InKanbun}` ~
+`\p{InBopomofo_Extended}` ~
+`\p{InKatakana_Phonetic_Extensions}` ~
+`\p{InEnclosed_CJK_Letters_and_Months}` ~
+`\p{InCJK_Compatibility}` ~
+`\p{InCJK_Unified_Ideographs_Extension_A}` ~
+`\p{InYijing_Hexagram_Symbols}` ~
+`\p{InCJK_Unified_Ideographs}` ~
+`\p{InYi_Syllables}` ~
+`\p{InYi_Radicals}` ~
+`\p{InHangul_Syllables}` ~
+`\p{InHigh_Surrogates}` ~
+`\p{InHigh_Private_Use_Surrogates}` ~
+`\p{InLow_Surrogates}` ~
+`\p{InPrivate_Use_Area}` ~
+`\p{InCJK_Compatibility_Ideographs}` ~
+`\p{InAlphabetic_Presentation_Forms}` ~
+`\p{InArabic_Presentation_Forms-A}` ~
+`\p{InVariation_Selectors}` ~
+`\p{InCombining_Half_Marks}` ~
+`\p{InCJK_Compatibility_Forms}` ~
+`\p{InSmall_Form_Variants}` ~
+`\p{InArabic_Presentation_Forms-B}` ~
+`\p{InHalfwidth_and_Fullwidth_Forms}` ~
+`\p{InSpecials}`;
+		auto result = matchFirst(data[current..$], ctRegex!(`^[`~blocks~`_][`~blocks~`_0123456789]*`));
 		if (result.empty)
 			return false;
 		tokens ~= new SymbolToken(this, current, current + result[0].length);
