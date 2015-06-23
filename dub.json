@@ -26,6 +26,16 @@
 			"dependencies": {
 				"wlang:ast": "*"
 			}
+		},
+		{
+			"name": "vm",
+			"targetType": "executable",
+			"targetName": "vw",
+			"sourcePaths": ["vm/source"],
+			"importPaths": ["vm/source"],
+			"dependencies": {
+				"wlang:ast": "*"
+			}
 		}
 	]
 }

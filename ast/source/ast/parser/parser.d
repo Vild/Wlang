@@ -53,29 +53,35 @@ private:
 			Statement stmt = getStatement(Array!AttributeToken());
 			curScope.Add(stmt);
 			if (stmt.NeedEndToken)
-				match!(EndToken);
+				match!EndToken;
 		}
 		return true;
 	}
 
-
 	Statement getStatement(Array!AttributeToken parrentAttr) {
 		Array!AttributeToken attr = parrentAttr;
+		Statement stmt;
 		while (has!AttributeToken)
 			attr ~= get!AttributeToken[0];
+
 		if (auto _ = getScopeStatement(attr))
-			return _;
+			stmt = _;
 		else if (auto _ = getDefinitionStatement(attr))
-			return _;
+			stmt = _;
 		else if (auto _ = getCallStatement(attr))
-			return _;
+			stmt = _;
 
 		else if (auto _ = getOperatorStatement(attr))
-			return _;
+			stmt = _;
 		else if (auto _ = getValueStatement(attr))
-			return _;
+			stmt = _;
 		else
 			throw new UnknownStatementException(this, tokens, current);
+			
+		if (auto _ = getAfterOperatorStatement(attr, stmt))
+			return _;
+
+		return stmt;
 	}
 
 	Statement getScopeStatement(Array!AttributeToken attr) {
@@ -87,7 +93,7 @@ private:
 				Statement stmt = getStatement(attr);
 				newScope.Add(stmt);
 				if (stmt.NeedEndToken)
-					match!(EndToken);
+					match!EndToken;
 			}
 
 			get!(OperatorToken, OperatorType.CURLYBRACKET_CLOSE);
@@ -141,7 +147,7 @@ private:
 				AddArgsValue(t, attr);
 				match!(OperatorToken, OperatorType.BRACKET_CLOSE);
 			} else {
-				if (auto _ = getOperatorStatement(attr)) //CHEAT CHEAT
+				if (auto _ = getOperatorStatement(attr)) //CHEAT CHEAT, to only take one token! getStatement will generate a functioncall
 					t ~= _;
 				else if (auto _ = getValueStatement(attr))
 					t ~= _;
@@ -172,26 +178,101 @@ private:
 		} else if (has!(OperatorToken, OperatorType.LOG_NOT)) {
 			get!OperatorToken;
 			return new NotStatement(this, attr, getStatement(attr));
+		} else if (has!(OperatorToken, OperatorType.BIT_NOT)) {
+			get!OperatorToken;
+			return new BitNotStatement(this, attr, getStatement(attr));
+		} else if (has!(OperatorToken, OperatorType.INCREMENT)) {
+			get!OperatorToken;
+			return new MathAssignStatement(this, attr, OperatorType.ADD_ASSIGN, getStatement(attr), new ConstantValueStatement(this, attr, 1));
+		} else if (has!(OperatorToken, OperatorType.DECREMENT)) {
+			get!OperatorToken;
+			return new MathAssignStatement(this, attr, OperatorType.SUB_ASSIGN, getStatement(attr), new ConstantValueStatement(this, attr, 1));
 		}
 		return null;
 	}
 
-	Statement getValueStatement(Array!AttributeToken attr) {
-		Statement stmt = null;
-		if (has!(ValueToken))
-			stmt = new ValueStatement(this, attr, get!(ValueToken, "value").value);
-		else if (has!(SymbolToken))
-			stmt = new SymbolStatement(this, attr, get!(SymbolToken, "symbol").symbol);
-		if (stmt) {
-			if (has!(OperatorToken, OperatorType.PLUS)) {
-				get!OperatorToken;
-				return new PlusStatement(this, attr, stmt, getStatement(attr));
-			}
+	Statement getAfterOperatorStatement(Array!AttributeToken attr, Statement stmt) {
+		if (
+			has!(OperatorToken, OperatorType.PLUS) ||
+			has!(OperatorToken, OperatorType.MINUS) ||
+			has!(OperatorToken, OperatorType.ASTERISK) ||
+			has!(OperatorToken, OperatorType.SLASH) ||
+			has!(OperatorToken, OperatorType.LEFT_ROTATE) ||
+			has!(OperatorToken, OperatorType.RIGHT_ROTATE) ||
+			has!(OperatorToken, OperatorType.LEFT_SHIFT) ||
+			has!(OperatorToken, OperatorType.RIGHT_SHIFT) ||
+			has!(OperatorToken, OperatorType.DOUBLE_AND) ||
+			has!(OperatorToken, OperatorType.BIT_AND) ||
+			has!(OperatorToken, OperatorType.LOG_OR) ||
+			has!(OperatorToken, OperatorType.BIT_OR) ||
+			has!(OperatorToken, OperatorType.LOG_XOR) ||
+			has!(OperatorToken, OperatorType.BIT_XOR) ||
+			has!(OperatorToken, OperatorType.MODULO)) {
+			auto d = get!(OperatorToken, "type");
+			return new MathStatement(this, attr, d.type.Type, stmt, getStatement(attr));
+		} else if (
+			has!(OperatorToken, OperatorType.ADD_ASSIGN) ||
+			has!(OperatorToken, OperatorType.SUB_ASSIGN) ||
+			has!(OperatorToken, OperatorType.MUL_ASSIGN) ||
+			has!(OperatorToken, OperatorType.DIV_ASSIGN) ||
+			has!(OperatorToken, OperatorType.LEFT_ROTATE_ASSIGN) ||
+			has!(OperatorToken, OperatorType.RIGHT_ROTATE_ASSIGN) ||
+			has!(OperatorToken, OperatorType.LEFT_SHIFT_ASSIGN) ||
+			has!(OperatorToken, OperatorType.RIGHT_SHIFT_ASSIGN) ||
+			has!(OperatorToken, OperatorType.LOG_AND_ASSIGN) ||
+			has!(OperatorToken, OperatorType.BIT_AND_ASSIGN) ||
+			has!(OperatorToken, OperatorType.LOG_OR_ASSIGN) ||
+			has!(OperatorToken, OperatorType.BIT_OR_ASSIGN) ||
+			has!(OperatorToken, OperatorType.LOG_XOR_ASSIGN) ||
+			has!(OperatorToken, OperatorType.BIT_XOR_ASSIGN) ||
+			has!(OperatorToken, OperatorType.MODULO_ASSIGN) ||
+			has!(OperatorToken, OperatorType.BIT_NOT_ASSIGN)) {
+			auto d = get!(OperatorToken, "type");
+			return new MathAssignStatement(this, attr, d.type.Type, stmt, getStatement(attr));
+		} else if (
+			has!(OperatorToken, OperatorType.EQUALS) ||
+			has!(OperatorToken, OperatorType.LESS_THAN_EQUAL) ||
+			has!(OperatorToken, OperatorType.GREATER_THAN_EQUAL) ||
+			has!(OperatorToken, OperatorType.LESS_THAN) ||
+			has!(OperatorToken, OperatorType.GREATER_THAN) ||
+			has!(OperatorToken, OperatorType.NOT_EQUALS)) {
+			auto d = get!(OperatorToken, "type");
+			return new MathAssignStatement(this, attr, d.type.Type, stmt, getStatement(attr));
+		} else if (has!(OperatorToken, OperatorType.INCREMENT)) {
+			get!OperatorToken;
+			return new TriggerAfterStatement(this, attr, stmt,
+				new MathAssignStatement(this, attr, OperatorType.ADD_ASSIGN, stmt,
+					new ConstantValueStatement(this, attr, 1)));
+		} else if (has!(OperatorToken, OperatorType.INCREMENT)) {
+			get!OperatorToken;
+			return new TriggerAfterStatement(this, attr, stmt,
+				new MathAssignStatement(this, attr, OperatorType.SUB_ASSIGN, stmt,
+					new ConstantValueStatement(this, attr, 1)));
+		} else if (has!(OperatorToken, OperatorType.ASSIGN)) {
+			get!OperatorToken;
+			SymbolToken sym;
+			if (auto _ = cast(SymbolStatement)stmt)
+				sym = _.Symbol;
+			else
+				throw new ExpectedException!SymbolStatement(this, tokens, current-1);
+			return new VariableAssignStatement(this, attr, sym, getStatement(attr));
 		}
-		return stmt;
+
+		return null;
+	}
+
+	Statement getValueStatement(Array!AttributeToken attr) {
+		if (has!(ValueToken))
+			return new ValueStatement(this, attr, get!(ValueToken, "value").value);
+		else if (has!(SymbolToken))
+			return new SymbolStatement(this, attr, get!(SymbolToken, "symbol").symbol);
+		return null;
 	}
 
 	bool has(pattern...)() {
+		if (current >= tokens.length)
+			return false;
+
 		mixin(genericPeekImpl!("return false;", "", pattern));
 		return true;
 	}

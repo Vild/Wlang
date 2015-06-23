@@ -1,8 +1,9 @@
 module ast.lexer.token;
 
 import ast.lexer.lexer;
-
+import std.range.primitives;
 import std.string;
+import std.json;
 
 class Token {
 public:
@@ -10,15 +11,32 @@ public:
 		this.lexer = lexer;
 		this.start = start;
 		this.end = end;
+		this.length = lexer.Data[start..end].walkLength;
 	}
 
 	@property Lexer TheLexer() { return lexer; }
 	@property size_t Start() { return start; }
 	@property size_t End() { return end; }
+	@property size_t Length() { return length; }
+
+	JSONValue toJson() {
+		return JSONValue([
+				"class": JSONValue(this.classinfo.name),
+				"start": JSONValue(start),
+				"end": JSONValue(end),
+				"length": JSONValue(length),
+				"data": JSONValue(lexer.Data[start..end])
+			]);
+	}
+
+	override string toString() {
+		return toJson.toString;
+	}
 
 protected:
 	Lexer lexer;
 	size_t start, end;
+	size_t length;
 }
 
 //Operator
@@ -91,8 +109,12 @@ public:
 		return this.type == type;
 	}
 
-	override string toString() {
-		return format("[OperatorToken] Type: %s, %s", type, lexer.Data[start .. end]);
+	override JSONValue toJson() {
+		return JSONValue([
+				"class": JSONValue(this.classinfo.name),
+				"super": super.toJson,
+				"type": JSONValue(type)
+			]);
 	}
 
 private:
@@ -126,8 +148,12 @@ public:
 		return this.type == type;
 	}
 
-	override string toString() {
-		return format("[AttributeToken] Type: %s, %s", type, lexer.Data[start .. end]);
+	override JSONValue toJson() {
+		return JSONValue([
+				"class": JSONValue(this.classinfo.name),
+				"super": super.toJson,
+				"type": JSONValue(type)
+			]);
 	}
 private:
 	AttributeType type;
@@ -167,8 +193,12 @@ public:
 		return this.type == type;
 	}
 
-	override string toString() {
-		return format("[TypeToken] Type: %s, %s", type, lexer.Data[start .. end]);
+	override JSONValue toJson() {
+		return JSONValue([
+				"class": JSONValue(this.classinfo.name),
+				"super": super.toJson,
+				"type": JSONValue(type)
+			]);
 	}
 private:
 	TypeType type;
@@ -278,8 +308,12 @@ public:
 		return this.type == type;
 	}
 
-	override string toString() {
-		return format("[ValueToken] Type: %s, %s", type, lexer.Data[start .. end]);
+	override JSONValue toJson() {
+		return JSONValue([
+				"class": JSONValue(this.classinfo.name),
+				"super": super.toJson,
+				"type": JSONValue(type)
+			]);
 	}
 private:
 	ValueType type;
@@ -323,10 +357,13 @@ public:
 		return this.type == type;
 	}
 
-	override string toString() {
-		return format("[KeywordToken] Type: %s, %s", type, lexer.Data[start .. end]);
+	override JSONValue toJson() {
+		return JSONValue([
+				"class": JSONValue(this.classinfo.name),
+				"super": super.toJson,
+				"type": JSONValue(type)
+			]);
 	}
-	
 private:
 	KeywordType type;
 }
@@ -339,9 +376,12 @@ public:
 	}
 	
 	@property string Symbol() { return lexer.Data[start .. end]; }
-	
-	override string toString() {
-		return format("[SymbolToken] %s", lexer.Data[start .. end]);
+
+	override JSONValue toJson() {
+		return JSONValue([
+				"class": JSONValue(this.classinfo.name),
+				"super": JSONValue(super.toJson)
+			]);
 	}
 }
 
@@ -352,7 +392,10 @@ public:
 		super(lexer, start, end);
 	}
 
-	override string toString() {
-		return format("[EndToken] %s", lexer.Data[start .. end]);
+	override JSONValue toJson() {
+		return JSONValue([
+				"class": JSONValue(this.classinfo.name),
+				"super": JSONValue(super.toJson)
+			]);
 	}
 }

@@ -8,5 +8,5 @@ dub.userprefs
 wlang
 wc
 *.a
-*.lex
-*.par
+*.lex.json
+*.par.json

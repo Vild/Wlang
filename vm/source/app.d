@@ -14,24 +14,18 @@ int main(string[] args) {
 void processFile(string file) {
 	logger.info("Processing file: %s", file);
 	Lexer lexer = new Lexer(readText(file));
-	File flex = File(file[0..$-1]~"lex.json", "w");
+	File flex = File(file[0..$-1]~"lex", "w");
 	scope(exit)
 		flex.close();
-	flex.writeln("[");
-	size_t idx = 0;
 	foreach (token; lexer.Tokens)
-		flex.write((idx++ ? ",\n" : "") ~ token.toString);
-	flex.writeln("\n]");
+		flex.writeln(token.toString);
 	
 	Parser parser = new Parser(lexer);
 	
-	File fpar = File(file[0..$-1]~"par.json", "w");
+	File fpar = File(file[0..$-1]~"par", "w");
 	scope(exit)
 		fpar.close();
-	fpar.writeln("[");
-	idx = 0;
 	foreach (token; parser.Root.List)
-		fpar.writeln((idx++ ? ",\n" : "") ~ token.toString);
-	fpar.writeln("\n]");
+		fpar.writeln(token.toString);
 	logger.info("End");
 }

@@ -22,7 +22,7 @@ public:
 		size_t column = 0;
 		
 		if (index >= data.length)
-			return [-1, -1];
+			return [0, 0];
 		
 		//Calculate the row and column number for the index
 		for (size_t i = 0; i < index; i++)
@@ -45,7 +45,7 @@ public:
 				return i;
 			else if (row > pos[0]) {
 				writefln("\nMoved past the point: %s, i: %s, row: %s, column: %s", pos, i, row, column);
-				return -1;
+				return 0;
 			}
 
 			if (data[i] == '\n') {
@@ -56,7 +56,7 @@ public:
 		}
 
 		writefln("\nPos is out of file: %s", pos);
-		return -1;
+		return 0;
 	}
 	
 private:
