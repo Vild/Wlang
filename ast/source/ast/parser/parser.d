@@ -4,7 +4,7 @@ import ast.lexer.lexer;
 import ast.lexer.token;
 import ast.parser.exception;
 import ast.parser.statement;
-import des.log;
+import wlang.io.log;
 import std.container.array;
 import std.traits;
 import std.typecons;
@@ -33,16 +33,17 @@ private:
 
 	void run() {
 		import std.stdio;
-		logger.info("Start with parser!");
+		Log log = Log.MainLogger();
+		log.Info("Start with parser!");
 		if (!process(root)) {
-			logger.error("Failed parsing!");
+			log.Error("Failed parsing!");
 			return;
 		}
 		writeln();
 		if (current >= tokens.length)
 			processedAll = true;
-		
-		logger.info("End of parser!");
+
+		log.Info("End of parser!");
 	}
 
 	bool process(Scope curScope) {
@@ -77,7 +78,7 @@ private:
 			stmt = _;
 		else
 			throw new UnknownStatementException(this, tokens, current);
-			
+
 		if (auto _ = getAfterOperatorStatement(attr, stmt))
 			return _;
 
@@ -88,7 +89,7 @@ private:
 		if (has!(OperatorToken, OperatorType.CURLYBRACKET_OPEN)) {
 			get!(OperatorToken, OperatorType.CURLYBRACKET_OPEN);
 			Scope newScope = new Scope(this, attr);
-			
+
 			while (!has!(OperatorToken, OperatorType.CURLYBRACKET_CLOSE)) {
 				Statement stmt = getStatement(attr);
 				newScope.Add(stmt);
@@ -103,36 +104,88 @@ private:
 	}
 
 	Statement getDefinitionStatement(Array!AttributeToken attr) {
-		if (has!(TypeToken, SymbolToken)) { // auto name
+		TypeContainer type;
+		SymbolToken symbol;
+		if (has!(TypeToken, SymbolToken)) {
 			auto d = get!(TypeToken, "type", SymbolToken, "symbol");
+			type = TypeContainer(d.type);
+			symbol = d.symbol;
+		} else if (has!(SymbolToken, SymbolToken)) {
+			auto d = get!(SymbolToken, "type", SymbolToken, "symbol");
+			type = TypeContainer(d.type);
+			symbol = d.symbol;
+		}
 
+		if (type.hasValue && symbol) { // auto name
 			if (has!EndToken) //auto name;
-				return new VariableDefinitionStatement(this, attr, d.type, d.symbol, new VoidStatement(this, attr));
+				return new VariableDefinitionStatement(this, attr, type, symbol, new VoidStatement(this, attr));
 			else if (has!(OperatorToken, OperatorType.ASSIGN)) {
 				get!OperatorToken;
-				return new VariableDefinitionStatement(this, attr, d.type, d.symbol, getStatement(attr));
+				return new VariableDefinitionStatement(this, attr, type, symbol, getStatement(attr));
 			} else if (has!(OperatorToken, OperatorType.BRACKET_OPEN)) {
 				get!OperatorToken;
 
 				Array!Argument t1; // Tier one of arguments, could be template args
 				Array!Argument t2; // Second Tier, can only be arguments
-				
+
 				AddArgsDefinition(t1, attr);
-				
+
 				match!(OperatorToken, OperatorType.BRACKET_CLOSE);
-				
+
 				if (has!(OperatorToken, OperatorType.BRACKET_OPEN)) {
 					get!(OperatorToken);
 					AddArgsDefinition(t2, attr);
 					match!(OperatorToken, OperatorType.BRACKET_CLOSE);
 				}
-				
+
+				Scope ops = cast(Scope)getScopeStatement(attr);
+				if (!ops)
+					throw new UnknownStatementException(this, tokens, current);
+
 				if (t2.length) // has both arguments and template
-					return new FunctionDefinitionStatement(this, attr, d.type, d.symbol, t1, t2);
+					return new FunctionDefinitionStatement(this, attr, type, symbol, t1, t2, ops);
 				else // has only arguments, t1 = arguments, t2 = empty
-					return new FunctionDefinitionStatement(this, attr, d.type, d.symbol, t2, t1);
+					return new FunctionDefinitionStatement(this, attr, type, symbol, t2, t1, ops);
 			} else
 				throw new UnknownStatementException(this, tokens, current);
+		} else if (has!(KeywordToken, KeywordType.DATA, SymbolToken)) {
+			auto d = get!(KeywordToken, SymbolToken, "symbol");
+
+			Array!Argument tem;
+
+			if (has!(OperatorToken, OperatorType.BRACKET_OPEN)) {
+				get!(OperatorToken);
+				AddArgsDefinition(tem, attr);
+				match!(OperatorToken, OperatorType.BRACKET_CLOSE);
+			}
+
+			Scope ops = cast(Scope)getScopeStatement(attr);
+			if (!ops)
+				throw new UnknownStatementException(this, tokens, current);
+
+			return new DataStatement(this, attr, d.symbol, tem, ops);
+		} else if (has!(KeywordToken, KeywordType.CLASS, SymbolToken)) {
+			auto d = get!(KeywordToken, SymbolToken, "symbol");
+
+			Array!Argument tem;
+			SymbolToken parent;
+
+			if (has!(OperatorToken, OperatorType.BRACKET_OPEN)) {
+				get!(OperatorToken);
+				AddArgsDefinition(tem, attr);
+				match!(OperatorToken, OperatorType.BRACKET_CLOSE);
+			}
+
+			if (has!(OperatorToken, OperatorType.COLON)) {
+				get!OperatorToken;
+				parent = match!SymbolToken[0]; //TODO: Parse template for parent
+			}
+
+			Scope ops = cast(Scope)getScopeStatement(attr);
+			if (!ops)
+				throw new UnknownStatementException(this, tokens, current);
+
+			return new ClassStatement(this, attr, d.symbol, tem, parent, ops);
 		}
 		return null;
 	}
@@ -272,7 +325,7 @@ private:
 	bool has(pattern...)() {
 		if (current >= tokens.length)
 			return false;
-
+		pragma(msg, genericPeekImpl!("return false;", "", pattern));
 		mixin(genericPeekImpl!("return false;", "", pattern));
 		return true;
 	}
@@ -280,7 +333,7 @@ private:
 	auto peek(pattern...)() {
 		mixin("alias retType = Tuple!("~genericReturnTypeImpl!pattern~");");
 		retType ret;
-		
+
 		mixin(genericReturnValueImpl!pattern);
 		return ret;
 	}
@@ -295,11 +348,11 @@ private:
 
 	auto match(pattern...)() {
 		import std.stdio;
-		mixin(genericPeekImpl!("throw new ExpectedException!%s(this, tokens, current+%d);", "p.stringof, idx", pattern));
+		mixin(genericPeekImpl!("throw new ExpectedException!%s(this, tokens, current+%d);", "p.stringof, idx", pattern)); // "
 
 		return get!pattern;
 	}
-		
+
 	static string genericPeekImpl(string onFail, string extraData, pattern...)() {
 		import std.string;
 		string ret = "";
@@ -310,13 +363,13 @@ private:
 					static assert(hasMember!(p, "isType") && __traits(compiles, (cast(p*)null).isType(pattern[i+1])),
 						format("The type '%s' hasn't got a function called isType for the type of '%s'. Please fix!", p.stringof, typeof(pattern[i+1]).stringof)
 						);
-					mixin(`ret ~= format("if (!cast(%s)tokens[current+%d] || !(cast(%s)tokens[current+%d]).isType(%s)) "~onFail~"\n", p.stringof, idx, p.stringof, idx, pattern[i+1].stringof, `~extraData~`);`);
+					mixin(`ret ~= format("if (!cast(%s)tokens[current+%d] || !(cast(%s)tokens[current+%d]).isType(%s)) "~onFail~"\n", p.stringof, idx, p.stringof, idx, "`~typeof(pattern[i+1]).stringof~"."~pattern[i+1].stringof~`", `~extraData~`);`);
 				} else
 					mixin(`ret ~= format("if (!cast(%s)tokens[current+%d]) "~onFail~"\n", p.stringof, idx, `~extraData~`);`);
 				idx++;
 			}
 		}
-		
+
 		return ret;
 	}
 	static string genericReturnTypeImpl(pattern...)() {
@@ -344,7 +397,7 @@ private:
 				idx++;
 			}
 		}
-		
+
 		return ret;
 	}
 
@@ -360,17 +413,17 @@ private:
 				auto d = get!(SymbolToken, "type");
 				arg.type = TypeContainer(d.type);
 			} else
-				arg.type = TypeContainer(NoData);
+				arg.type = TypeContainer(NoData());
 
 			auto sym = get!(SymbolToken, "symbol");
 			arg.symbol = sym.symbol;
-			
+
 			if (has!(OperatorToken, OperatorType.ASSIGN)) {
 				get!(OperatorToken, OperatorType.ASSIGN);
 				arg.defaultValue = getStatement(attr);
 			} else
 				arg.defaultValue = new VoidStatement(this, attr);
-			
+
 			list ~= arg;
 			if (!has!(OperatorToken, OperatorType.COMMA))
 				break;
@@ -382,9 +435,9 @@ private:
 		while (true) {
 			if (has!(OperatorToken, OperatorType.BRACKET_CLOSE))
 				break;
-			
+
 			list ~= getStatement(attr);
-			
+
 			if (!has!(OperatorToken, OperatorType.COMMA))
 				break;
 			get!(OperatorToken, OperatorType.COMMA);

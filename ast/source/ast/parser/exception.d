@@ -36,13 +36,14 @@ public:
 			linePointer ~= line;
 			linePointer ~= lexer.Data[lineStart .. lineEnd];
 			linePointer ~= "\n";
-			linePointer ~= to!string(' '.repeat.take(line.length + startPos[1] - 2));
+
+			linePointer ~= to!string(' '.repeat.take(line.length + token.Column + token.Length));
 			linePointer ~= "^";
-			
+			/*
 			if (dif > 0)
 				linePointer ~= to!string('-'.repeat.take(dif - 1));
 			if (dif > 1)
-				linePointer ~= "^";
+				linePointer ~= "^";*/
 			linePointer ~= "\n";
 		}
 
@@ -61,7 +62,7 @@ public:
 			linePointer ~= line;
 			linePointer ~= lexer.Data[lineStart .. lineEnd];
 			linePointer ~= "\n";
-			linePointer ~= to!string(' '.repeat.take(line.length + startPos[1]));
+			linePointer ~= to!string(' '.repeat.take(line.length + token.Column));
 			linePointer ~= "^";
 
 			if (dif > 0)
@@ -69,10 +70,6 @@ public:
 			if (dif > 1)
 				linePointer ~= "^";
 		}
-	
-
-
-
 
 		msg = format("\n%s\nStarting at line %d:%d, ending at %d:%d.\nToken: %s\n%s",
 			error,
@@ -95,6 +92,6 @@ public:
 class ExpectedException(expected) : ParserException {
 public:
 	this(Parser parser, Array!Token token, size_t idx, string f = __FILE__, size_t l = __LINE__) {
-		super(parser, token, idx, "Expected '" ~ expected.stringof ~ "' got " ~ token[idx].toString, f, l, true);
+		super(parser, token, idx, "Expected '" ~ expected.stringof ~ "' got " ~ token[idx].toString, f, l, is(expected == EndToken));
 	}
 }

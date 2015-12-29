@@ -4,12 +4,16 @@ import ast.lexer.token;
 import std.variant;
 import ast.parser.statement;
 import std.json;
+import ast.util.json;
 
-enum NoData = cast(void *)null;
-alias TypeContainer = Algebraic!(TypeToken, SymbolToken, /* For no data */ void *);
-JSONValue toJson(T)(T obj) if (is(T == TypeContainer)) {
-	return JSONValue(obj.toString);
+
+struct NoData {
+	JSONValue toJson() {
+		return JSONValue("null");
+	}
 }
+//Don't forget to update the ast.util.json.toJson function!
+alias TypeContainer = Algebraic!(TypeToken, SymbolToken, NoData);
 
 struct Argument {
 	TypeContainer type;
@@ -18,7 +22,7 @@ struct Argument {
 
 	JSONValue toJson() {
 		return JSONValue([
-				"class": JSONValue(this.stringof),
+				"class": JSONValue(typeid(this).name),
 				"type": type.toJson,
 				"symbol": symbol.toJson,
 				"defaultValue": defaultValue.toJson

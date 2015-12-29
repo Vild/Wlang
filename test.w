@@ -12,4 +12,37 @@ auto fun(T)(T obj, bool test, float fun = 1.0) {
 	☃ = ((1+1)+(2+2));
 
 	fun!T(obj, !test, fun+1);
+	
+	//testClass!T test;
+	//test.t4 = 10;
+	//test.t4();
 }
+
+data testData {
+	int t1;
+	bool t2;
+	string t3;
+}
+
+class testClass(T) {
+	int t1;
+	bool t2;
+	string t3;
+	T t4;
+}
+
+class testClassWithParent : Object {
+	int t1;
+	bool t2;
+	string t3;
+}
+
+
+
+
+
+
+
+
+
+

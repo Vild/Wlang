@@ -2,7 +2,7 @@ module ast.lexer.lexer;
 
 import ast.lexer.exception;
 import ast.lexer.token;
-import des.log;
+import wlang.io.log;
 import std.container;
 import std.regex;
 import std.array;
@@ -13,32 +13,32 @@ public:
 		this.data = data.replace("\t", " "); //TODO: Fix this silly hack for GetDataPos
 		process();
 	}
-	
+
 	@property string Data() { return data; }
-	@property Array!Token Tokens() { return tokens; } 
-	
+	@property Array!Token Tokens() { return tokens; }
+
 	size_t[2] GetLinePos(size_t index) {
 		size_t row = 0;
 		size_t column = 0;
-		
+
 		if (index >= data.length)
 			return [0, 0];
-		
+
 		//Calculate the row and column number for the index
 		for (size_t i = 0; i < index; i++)
 			if (data[i] == '\n') {
 				row++;
 				column = 0;
-			} else 
+			} else
 				column++;
-			
+
 		return [row, column];
 	}
 
 	size_t GetDataPos(size_t[2] pos) {
 		size_t row = 0;
 		size_t column = 0;
-		import std.stdio;		
+		import std.stdio;
 		//Calculate the row and column number for the index
 		for (size_t i = 0; i < data.length; i++) {
 			if (row == pos[0] && column == pos[1])
@@ -51,37 +51,39 @@ public:
 			if (data[i] == '\n') {
 				row++;
 				column = 0;
-			} else 
+			} else
 				column++;
 		}
 
 		writefln("\nPos is out of file: %s", pos);
 		return 0;
 	}
-	
+
 private:
 	string data;
 	Array!Token tokens;
-	
+
 	size_t current;
-	
+	size_t column;
+
 	void process() {
 		import std.stdio;
-		logger.info("Start with lexing!");
+		Log log = Log.MainLogger();
+		log.Info("Start with lexing!");
 		size_t lastCurrent = current;
 		while (current < data.length) {
 			lastCurrent = current;
 			write("\rCurrent token: ", current + 1, " out of ", data.length);
 			parseToken();
 			if (current == lastCurrent) {
-				logger.error("\rFailed to parse token ", current + 1, " --> '", data[current], "'");
+				log.Error("\rFailed to parse token ", current + 1, " --> '", data[current], "'");
 				break;
 			}
 		}
 		writeln();
-		logger.info("End of lexing!");
+		log.Info("End of lexing!");
 	}
-	
+
 	void parseToken() {
 		if (skipWhitespace()) {}
 		else if (skipComments()) {}
@@ -99,9 +101,12 @@ private:
 		auto result = matchFirst(data[current..$], ctRegex!("^"~re));
 		if (result.empty)
 			return false;
-		
-		tokens ~= new T(this, current, current + result[0].length, arg);
+
+		T t = new T(this, current, current + result[0].length, column, arg);
+		tokens ~= t;
+
 		current += result[0].length;
+		column += t.Length;
 		return true;
 	}
 
@@ -109,17 +114,24 @@ private:
 		if (text != re)
 			return false;
 
-		tokens ~= new T(this, current, current + text.length, arg);
+		T t = new T(this, current, current + text.length, column, arg);
+		tokens ~= t;
 		current += text.length;
+		column += t.Length;
 		return true;
 	}
-	
+
 	bool skipWhitespace() {
 		import core.stdc.ctype;
 		if (!data[current].isspace)
 			return false;
-		while (current < data.length && data[current].isspace)
+		while (current < data.length && data[current].isspace) {
+			if (data[current] == '\n')
+				column = 0;
+			else
+				column++;
 			current++;
+		}
 		return true;
 	}
 
@@ -132,6 +144,7 @@ private:
 		}
 
 		current += result[0].length;
+		column += result[0].length;
 		return true;
 	}
 
@@ -223,11 +236,11 @@ private:
 		if (result.empty)
 			return false;
 		auto text = result[0];
-		
+
 		if (addKeyword!(`auto`, TypeToken)(text, TypeType.AUTO)) {}
-		
+
 		else if (addKeyword!(`bool`, TypeToken)(text, TypeType.BOOL)) {}
-		
+
 		else if (addKeyword!(`byte`, TypeToken)(text, TypeType.BYTE)) {}
 		else if (addKeyword!(`ubyte`, TypeToken)(text, TypeType.UBYTE)) {}
 		else if (addKeyword!(`short`, TypeToken)(text, TypeType.SHORT)) {}
@@ -238,7 +251,7 @@ private:
 		else if (addKeyword!(`ulong`, TypeToken)(text, TypeType.ULONG)) {}
 		else if (addKeyword!(`float`, TypeToken)(text, TypeType.FLOAT)) {}
 		else if (addKeyword!(`double`, TypeToken)(text, TypeType.DOUBLE)) {}
-		
+
 		else if (addKeyword!(`string`, TypeToken)(text, TypeType.STRING)) {}
 		else
 			return false;
@@ -261,7 +274,7 @@ private:
 		else if (addKeyword!(`switch`, KeywordToken)(text, KeywordType.SWITCH)) {}
 		else if (addKeyword!(`default`, KeywordToken)(text, KeywordType.DEFAULT)) {}
 		else if (addKeyword!(`case`, KeywordToken)(text, KeywordType.CASE)) {}
-		
+
 		else if (addKeyword!(`class`, KeywordToken)(text, KeywordType.CLASS)) {}
 		else if (addKeyword!(`data`, KeywordToken)(text, KeywordType.DATA)) {}
 		else if (addKeyword!(`alias`, KeywordToken)(text, KeywordType.ALIAS)) {}
@@ -270,7 +283,7 @@ private:
 
 		else if (addKeyword!(`module`, KeywordToken)(text, KeywordType.MODULE)) {}
 		else if (addKeyword!(`import`, KeywordToken)(text, KeywordType.IMPORT)) {}
-		
+
 		else
 			return false;
 		return true;
@@ -418,8 +431,10 @@ private:
 		auto result = matchFirst(data[current..$], ctRegex!(`^[`~blocks~`_][`~blocks~`_0123456789]*`));
 		if (result.empty)
 			return false;
-		tokens ~= new SymbolToken(this, current, current + result[0].length);
+		auto t = new SymbolToken(this, current, current + result[0].length, column);
+		tokens ~= t;
 		current += result[0].length;
+		column += t.Length;
 		return true;
 	}
 }

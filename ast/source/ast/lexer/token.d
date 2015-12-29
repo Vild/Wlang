@@ -4,26 +4,30 @@ import ast.lexer.lexer;
 import std.range.primitives;
 import std.string;
 import std.json;
+import ast.util.json;
 
 class Token {
 public:
-	this(Lexer lexer, size_t start, size_t end) {
+	this(Lexer lexer, size_t start, size_t end, size_t column) {
 		this.lexer = lexer;
 		this.start = start;
 		this.end = end;
-		this.length = lexer.Data[start..end].walkLength;
+		this.column = column;
+		this.length = lexer.Data[start .. end].walkLength;
 	}
 
 	@property Lexer TheLexer() { return lexer; }
 	@property size_t Start() { return start; }
 	@property size_t End() { return end; }
+	@property size_t Column() { return column; }
 	@property size_t Length() { return length; }
 
 	JSONValue toJson() {
 		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
+				"class": JSONValue(typeof(this).classinfo.name),
 				"start": JSONValue(start),
 				"end": JSONValue(end),
+				"column": JSONValue(column),
 				"length": JSONValue(length),
 				"data": JSONValue(lexer.Data[start..end])
 			]);
@@ -36,6 +40,7 @@ public:
 protected:
 	Lexer lexer;
 	size_t start, end;
+	size_t column;
 	size_t length;
 }
 
@@ -98,8 +103,8 @@ enum OperatorType {
 }
 class OperatorToken : Token {
 public:
-	this(Lexer lexer, size_t start, size_t end, OperatorType type) {
-		super(lexer, start, end);
+	this(Lexer lexer, size_t start, size_t end, size_t column, OperatorType type) {
+		super(lexer, start, end, column);
 		this.type = type;
 	}
 
@@ -111,9 +116,9 @@ public:
 
 	override JSONValue toJson() {
 		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
+				"class": JSONValue(typeof(this).classinfo.name),
 				"super": super.toJson,
-				"type": JSONValue(type)
+				"type": type.toJson
 			]);
 	}
 
@@ -136,8 +141,8 @@ enum AttributeType {
 }
 class AttributeToken : Token {
 public:
-	this(Lexer lexer, size_t start, size_t end, AttributeType type) {
-		super(lexer, start, end);
+	this(Lexer lexer, size_t start, size_t end, size_t column, AttributeType type) {
+		super(lexer, start, end, column);
 		this.type = type;
 	}
 	
@@ -150,9 +155,9 @@ public:
 
 	override JSONValue toJson() {
 		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
+				"class": JSONValue(typeof(this).classinfo.name),
 				"super": super.toJson,
-				"type": JSONValue(type)
+				"type": type.toJson
 			]);
 	}
 private:
@@ -181,8 +186,8 @@ enum TypeType {
 }
 class TypeToken : Token {
 public:
-	this(Lexer lexer, size_t start, size_t end, TypeType type) {
-		super(lexer, start, end);
+	this(Lexer lexer, size_t start, size_t end, size_t column, TypeType type) {
+		super(lexer, start, end, column);
 		this.type = type;
 	}
 	
@@ -195,9 +200,9 @@ public:
 
 	override JSONValue toJson() {
 		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
+				"class": JSONValue(typeof(this).classinfo.name),
 				"super": super.toJson,
-				"type": JSONValue(type)
+				"type": type.toJson
 			]);
 	}
 private:
@@ -234,8 +239,8 @@ enum ValueType {
 }
 class ValueToken : Token {
 public:
-	this(Lexer lexer, size_t start, size_t end, ValueType type) {
-		super(lexer, start, end);
+	this(Lexer lexer, size_t start, size_t end, size_t column, ValueType type) {
+		super(lexer, start, end, column);
 		this.type = type;
 	}
 
@@ -310,9 +315,9 @@ public:
 
 	override JSONValue toJson() {
 		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
+				"class": JSONValue(typeof(this).classinfo.name),
 				"super": super.toJson,
-				"type": JSONValue(type)
+				"type": type.toJson
 			]);
 	}
 private:
@@ -346,8 +351,8 @@ enum KeywordType {
 }  
 class KeywordToken : Token {
 public:
-	this(Lexer lexer, size_t start, size_t end, KeywordType type) {
-		super(lexer, start, end);
+	this(Lexer lexer, size_t start, size_t end, size_t column, KeywordType type) {
+		super(lexer, start, end, column);
 		this.type = type;
 	}
 	
@@ -359,9 +364,9 @@ public:
 
 	override JSONValue toJson() {
 		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
+				"class": JSONValue(typeof(this).classinfo.name),
 				"super": super.toJson,
-				"type": JSONValue(type)
+				"type": type.toJson
 			]);
 	}
 private:
@@ -371,15 +376,15 @@ private:
 //Variable names, Function names
 class SymbolToken : Token {
 public:
-	this(Lexer lexer, size_t start, size_t end) {
-		super(lexer, start, end);
+	this(Lexer lexer, size_t start, size_t end, size_t column) {
+		super(lexer, start, end, column);
 	}
 	
 	@property string Symbol() { return lexer.Data[start .. end]; }
 
 	override JSONValue toJson() {
 		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
+				"class": JSONValue(typeof(this).classinfo.name),
 				"super": JSONValue(super.toJson)
 			]);
 	}
@@ -388,13 +393,13 @@ public:
 //;
 class EndToken : Token {
 public:
-	this(Lexer lexer, size_t start, size_t end) {
-		super(lexer, start, end);
+	this(Lexer lexer, size_t start, size_t end, size_t column) {
+		super(lexer, start, end, column);
 	}
 
 	override JSONValue toJson() {
 		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
+				"class": JSONValue(typeof(this).classinfo.name),
 				"super": JSONValue(super.toJson)
 			]);
 	}
