@@ -1,4 +1,4 @@
-﻿module ast.parser.statement;
+module ast.parser.statement;
 
 import ast.lexer.token;
 import ast.parser.data;
@@ -7,17 +7,7 @@ import std.container.array;
 import std.json;
 import std.string;
 import std.variant;
-
-JSONValue toJson(T)(Array!T arr) if (is(T : Statement) || is(T : Token) || is(T : Argument)) {
-	JSONValue ret = parseJSON(`[]`);
-	foreach(obj; arr)
-		ret.array ~= obj.toJson();
-	return ret;
-}
-JSONValue toJson(T)(T obj) if (is(T == enum)) {
-	import std.format;
-	return JSONValue(format("%s", obj));
-}
+import ast.util.json;
 
 class Statement {
 public:
@@ -26,17 +16,22 @@ public:
 		this.attr = attr;
 	}
 
-	@property Parser TheParser() { return parser; }
-	@property Array!AttributeToken Attributes() { return attr; }
-	@property bool NeedEndToken() { return true; }
+	@property Parser TheParser() {
+		return parser;
+	}
+
+	@property Array!AttributeToken Attributes() {
+		return attr;
+	}
+
+	@property bool NeedEndToken() {
+		return true;
+	}
 
 	JSONValue toJson() {
-		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
-				"attributes": attr.toJson
-			]);
+		return JSONValue(["class" : JSONValue(typeof(this).classinfo.name), "attributes" : attr.toJson]);
 	}
-	
+
 	override string toString() {
 		return toJson.toString;
 	}
@@ -53,10 +48,7 @@ public:
 	}
 
 	override JSONValue toJson() {
-		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
-				"super": JSONValue(super.toJson)
-			]);
+		return JSONValue(["class" : JSONValue(typeof(this).classinfo.name), "super" : JSONValue(super.toJson)]);
 	}
 }
 
@@ -68,12 +60,9 @@ public:
 	}
 
 	override JSONValue toJson() {
-		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
-				"super": super.toJson,
-				"value": value.toJson
-			]);
+		return JSONValue(["class" : JSONValue(typeof(this).classinfo.name), "super" : super.toJson, "value" : value.toJson]);
 	}
+
 private:
 	ValueToken value;
 }
@@ -84,15 +73,12 @@ public:
 		super(parser, attr);
 		this.stmt = stmt;
 	}
-	
+
 	override JSONValue toJson() {
-		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
-				"super": super.toJson,
-				"stmt": stmt.toJson,
-				"after": after.toJson
-			]);
+		return JSONValue(["class" : JSONValue(typeof(this).classinfo.name), "super" : super.toJson, "stmt" : stmt.toJson,
+				"after" : after.toJson]);
 	}
+
 private:
 	Statement stmt;
 	Statement after;
@@ -105,15 +91,14 @@ public:
 		this.value = value;
 	}
 
-	@property long Value() { return value;}
-	
-	override JSONValue toJson() {
-		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
-				"super": super.toJson,
-				"value": JSONValue(value)
-			]);
+	@property long Value() {
+		return value;
 	}
+
+	override JSONValue toJson() {
+		return JSONValue(["class" : JSONValue(typeof(this).classinfo.name), "super" : super.toJson, "value" : JSONValue(value)]);
+	}
+
 private:
 	long value;
 }
@@ -125,15 +110,14 @@ public:
 		this.symbol = symbol;
 	}
 
-	@property SymbolToken Symbol() { return symbol; }
+	@property SymbolToken Symbol() {
+		return symbol;
+	}
 
 	override JSONValue toJson() {
-		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
-				"super": super.toJson,
-				"symbol": symbol.toJson
-			]);
+		return JSONValue(["class" : JSONValue(typeof(this).classinfo.name), "super" : super.toJson, "symbol" : symbol.toJson]);
 	}
+
 private:
 	SymbolToken symbol;
 }
@@ -149,16 +133,18 @@ public:
 		return stmt;
 	}
 
-	@property ref Array!Statement List() { return list; }
-	@property override bool NeedEndToken() { return false; }
+	@property ref Array!Statement List() {
+		return list;
+	}
+
+	@property override bool NeedEndToken() {
+		return false;
+	}
 
 	override JSONValue toJson() {
-		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
-				"super": super.toJson,
-				"list": list.toJson
-			]);
+		return JSONValue(["class" : JSONValue(typeof(this).classinfo.name), "super" : super.toJson, "list" : list.toJson]);
 	}
+
 private:
 	Array!Statement list;
 
@@ -168,29 +154,32 @@ private:
 
 class VariableDefinitionStatement : Statement {
 public:
-	this(Parser parser, Array!AttributeToken attr, TypeToken type, SymbolToken symbol, Statement startValue) {
+	this(Parser parser, Array!AttributeToken attr, TypeContainer type, SymbolToken symbol, Statement startValue) {
 		super(parser, attr);
 		this.type = type;
 		this.symbol = symbol;
 		this.startValue = startValue;
 	}
 
-	@property TypeToken Type() { return type; }
-	@property SymbolToken Symbol() { return symbol; }
-	@property Statement StartValue() { return startValue; }
+	@property TypeContainer Type() {
+		return type;
+	}
+
+	@property SymbolToken Symbol() {
+		return symbol;
+	}
+
+	@property Statement StartValue() {
+		return startValue;
+	}
 
 	override JSONValue toJson() {
-		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
-				"super": super.toJson,
-				"type": type.toJson,
-				"symbol": symbol.toJson,
-				"startValue": startValue.toJson
-			]);
+		return JSONValue(["class" : JSONValue(typeof(this).classinfo.name), "super" : super.toJson, "type" : type.toJson,
+				"symbol" : symbol.toJson, "startValue" : startValue.toJson]);
 	}
 
 private:
-	TypeToken type;
+	TypeContainer type;
 	SymbolToken symbol;
 	Statement startValue;
 }
@@ -203,18 +192,19 @@ public:
 		this.value = value;
 	}
 
-	@property SymbolToken Symbol() { return symbol; }
-	@property Statement Value() { return value; }
-	
-	override JSONValue toJson() {
-		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
-				"super": super.toJson,
-				"symbol": symbol.toJson,
-				"value": value.toJson
-			]);
+	@property SymbolToken Symbol() {
+		return symbol;
 	}
-	
+
+	@property Statement Value() {
+		return value;
+	}
+
+	override JSONValue toJson() {
+		return JSONValue(["class" : JSONValue(typeof(this).classinfo.name), "super" : super.toJson, "symbol"
+				: symbol.toJson, "value" : value.toJson]);
+	}
+
 private:
 	SymbolToken symbol;
 	Statement value;
@@ -222,37 +212,51 @@ private:
 
 class FunctionDefinitionStatement : Statement {
 public:
-	this(Parser parser, Array!AttributeToken attr, TypeToken type, SymbolToken symbol, Array!Argument templates, Array!Argument arguments) {
+	this(Parser parser, Array!AttributeToken attr, TypeContainer type, SymbolToken symbol, Array!Argument templates,
+			Array!Argument arguments, Scope operations) {
 		super(parser, attr);
 		this.type = type;
 		this.symbol = symbol;
 		this.templates = templates;
 		this.arguments = arguments;
+		this.operations = operations;
 	}
-	
-	@property TypeToken Type() { return type; }
-	@property SymbolToken Symbol() { return symbol; }
-	@property Array!Argument Templates() { return templates; }
-	@property Array!Argument Arguments() { return arguments; }
 
-	@property override bool NeedEndToken() { return false; }
-	
-	override JSONValue toJson() {
-		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
-				"super": super.toJson,
-				"type": type.toJson,
-				"symbol": symbol.toJson,
-				"templates": templates.toJson,
-				"arguments": arguments.toJson
-			]);
+	@property TypeContainer Type() {
+		return type;
 	}
-	
+
+	@property SymbolToken Symbol() {
+		return symbol;
+	}
+
+	@property Array!Argument Templates() {
+		return templates;
+	}
+
+	@property Array!Argument Arguments() {
+		return arguments;
+	}
+
+	@property Scope Operations() {
+		return operations;
+	}
+
+	@property override bool NeedEndToken() {
+		return false;
+	}
+
+	override JSONValue toJson() {
+		return JSONValue(["class" : JSONValue(typeof(this).classinfo.name), "super" : super.toJson, "type" : type.toJson,
+				"symbol" : symbol.toJson, "templates" : templates.toJson, "arguments" : arguments.toJson, "operations" : operations.toJson]);
+	}
+
 private:
-	TypeToken type;
+	TypeContainer type;
 	SymbolToken symbol;
 	Array!Argument templates;
 	Array!Argument arguments;
+	Scope operations;
 }
 
 class FunctionCallStatement : Statement {
@@ -264,20 +268,23 @@ public:
 		this.arguments = arguments;
 	}
 
-	@property SymbolToken Symbol() { return symbol; }
-	@property Array!Statement Templates() { return templates; }
-	@property Array!Statement Arguments() { return arguments; }
-	
-	override JSONValue toJson() {
-		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
-				"super": super.toJson,
-				"symbol": symbol.toJson,
-				"templates": templates.toJson,
-				"arguments": arguments.toJson
-			]);
+	@property SymbolToken Symbol() {
+		return symbol;
 	}
-	
+
+	@property Array!Statement Templates() {
+		return templates;
+	}
+
+	@property Array!Statement Arguments() {
+		return arguments;
+	}
+
+	override JSONValue toJson() {
+		return JSONValue(["class" : JSONValue(typeof(this).classinfo.name), "super" : super.toJson, "symbol"
+				: symbol.toJson, "templates" : templates.toJson, "arguments" : arguments.toJson]);
+	}
+
 private:
 	SymbolToken symbol;
 	Array!Statement templates;
@@ -289,17 +296,16 @@ public:
 	this(Parser parser, Array!AttributeToken attr, Statement value) {
 		super(parser, attr);
 		this.value = value;
-	} 
-	
-	@property Statement Value() { return value; }
+	}
+
+	@property Statement Value() {
+		return value;
+	}
 
 	override JSONValue toJson() {
-		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
-				"super": super.toJson,
-				"value": value.toJson
-			]);
+		return JSONValue(["class" : JSONValue(typeof(this).classinfo.name), "super" : super.toJson, "value" : value.toJson]);
 	}
+
 private:
 	Statement value;
 }
@@ -309,17 +315,16 @@ public:
 	this(Parser parser, Array!AttributeToken attr, Statement value) {
 		super(parser, attr);
 		this.value = value;
-	} 
-	
-	@property Statement Value() { return value; }
-	
-	override JSONValue toJson() {
-		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
-				"super": super.toJson,
-				"value": value.toJson
-			]);
 	}
+
+	@property Statement Value() {
+		return value;
+	}
+
+	override JSONValue toJson() {
+		return JSONValue(["class" : JSONValue(typeof(this).classinfo.name), "super" : super.toJson, "value" : value.toJson]);
+	}
+
 private:
 	Statement value;
 }
@@ -329,17 +334,16 @@ public:
 	this(Parser parser, Array!AttributeToken attr, Statement value) {
 		super(parser, attr);
 		this.value = value;
-	} 
-	
-	@property Statement Value() { return value; }
-	
-	override JSONValue toJson() {
-		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
-				"super": super.toJson,
-				"value": value.toJson
-			]);
 	}
+
+	@property Statement Value() {
+		return value;
+	}
+
+	override JSONValue toJson() {
+		return JSONValue(["class" : JSONValue(typeof(this).classinfo.name), "super" : super.toJson, "value" : value.toJson]);
+	}
+
 private:
 	Statement value;
 }
@@ -351,21 +355,25 @@ public:
 		this.type = type;
 		this.left = left;
 		this.right = right;
-	} 
-	
-	@property OperatorType Type() { return type; }
-	@property Statement Left() { return left; }
-	@property Statement Right() { return right; }
-	
-	override JSONValue toJson() {
-		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
-				"super": super.toJson,
-				"type": type.toJson,
-				"left": left.toJson,
-				"right": right.toJson
-			]);
 	}
+
+	@property OperatorType Type() {
+		return type;
+	}
+
+	@property Statement Left() {
+		return left;
+	}
+
+	@property Statement Right() {
+		return right;
+	}
+
+	override JSONValue toJson() {
+		return JSONValue(["class" : JSONValue(typeof(this).classinfo.name), "super" : super.toJson, "type" : type.toJson,
+				"left" : left.toJson, "right" : right.toJson]);
+	}
+
 private:
 	OperatorType type;
 	Statement left;
@@ -379,21 +387,25 @@ public:
 		this.type = type;
 		this.left = left;
 		this.right = right;
-	} 
-	
-	@property OperatorType Type() { return type; }
-	@property Statement Left() { return left; }
-	@property Statement Right() { return right; }
-	
-	override JSONValue toJson() {
-		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
-				"super": super.toJson,
-				"type": type.toJson,
-				"left": left.toJson,
-				"right": right.toJson
-			]);
 	}
+
+	@property OperatorType Type() {
+		return type;
+	}
+
+	@property Statement Left() {
+		return left;
+	}
+
+	@property Statement Right() {
+		return right;
+	}
+
+	override JSONValue toJson() {
+		return JSONValue(["class" : JSONValue(typeof(this).classinfo.name), "super" : super.toJson, "type" : type.toJson,
+				"left" : left.toJson, "right" : right.toJson]);
+	}
+
 private:
 	OperatorType type;
 	Statement left;
@@ -407,24 +419,106 @@ public:
 		this.type = type;
 		this.left = left;
 		this.right = right;
-	} 
-	
-	@property OperatorType Type() { return type; }
-	@property Statement Left() { return left; }
-	@property Statement Right() { return right; }
-	
-	override JSONValue toJson() {
-		return JSONValue([
-				"class": JSONValue(this.classinfo.name),
-				"super": super.toJson,
-				"type": type.toJson,
-				"left": left.toJson,
-				"right": right.toJson
-			]);
 	}
+
+	@property OperatorType Type() {
+		return type;
+	}
+
+	@property Statement Left() {
+		return left;
+	}
+
+	@property Statement Right() {
+		return right;
+	}
+
+	override JSONValue toJson() {
+		return JSONValue(["class" : JSONValue(typeof(this).classinfo.name), "super" : super.toJson, "type" : type.toJson,
+				"left" : left.toJson, "right" : right.toJson]);
+	}
+
 private:
 	OperatorType type;
 	Statement left;
 	Statement right;
 }
 
+class DataStatement : Statement {
+public:
+	this(Parser parser, Array!AttributeToken attr, SymbolToken symbol, Array!Argument templates, Scope operations) {
+		super(parser, attr);
+		this.symbol = symbol;
+		this.templates = templates;
+		this.operations = operations;
+	}
+
+	@property SymbolToken Symbol() {
+		return symbol;
+	}
+
+	@property Array!Argument Templates() {
+		return templates;
+	}
+
+	@property Scope Operations() {
+		return operations;
+	}
+
+	@property override bool NeedEndToken() {
+		return false;
+	}
+
+	override JSONValue toJson() {
+		return JSONValue(["class" : JSONValue(typeof(this).classinfo.name), "super" : super.toJson, "symbol"
+				: symbol.toJson, "templates" : templates.toJson, "operations" : operations.toJson]);
+	}
+
+private:
+	SymbolToken symbol;
+	Array!Argument templates;
+	Scope operations;
+}
+
+class ClassStatement : Statement {
+public:
+	this(Parser parser, Array!AttributeToken attr, SymbolToken symbol, Array!Argument templates, SymbolToken parent, Scope operations) {
+		super(parser, attr);
+		this.symbol = symbol;
+		this.templates = templates;
+		this.parent = parent;
+		this.operations = operations;
+	}
+
+	@property SymbolToken Symbol() {
+		return symbol;
+	}
+
+	@property Array!Argument Templates() {
+		return templates;
+	}
+
+	@property SymbolToken Parent() {
+		return parent;
+	}
+
+	@property Scope Operations() {
+		return operations;
+	}
+
+	@property override bool NeedEndToken() {
+		return false;
+	}
+
+	override JSONValue toJson() {
+		return JSONValue(["class" : JSONValue(typeof(this).classinfo.name), "super" : super.toJson, "symbol"
+				: symbol.toJson, "templates" : templates.toJson, "parent" : parent ? parent.toJson : JSONValue("null"),
+				"operations" : operations.toJson]);
+	}
+
+private:
+	SymbolToken symbol;
+	Array!Argument templates;
+	SymbolToken parent;
+	Scope operations;
+}

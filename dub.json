@@ -15,7 +15,7 @@
 			"importPaths": ["ast/source"],
 			"dependencies": {
 				"deslog": "~>0.2.0"
-			},
+			}
 		},
 		{
 			"name": "compiler",

@@ -9,12 +9,9 @@ public:
 		super("");
 		size_t[2] startLine = lexer.GetLinePos(start);
 		size_t[2] endLine = lexer.GetLinePos(end);
-		
-		msg = format("%s Starting at line %d:%d, ending at %d:%d.\nLine data: %s\n",
-			error,
-			startLine[0], startLine[1],
-			endLine[0], endLine[1],
-			lexer.Data()[start..end]);
+
+		msg = format("%s Starting at line %d:%d, ending at %d:%d.\nLine data: %s\n", error, startLine[0], startLine[1],
+				endLine[0], endLine[1], lexer.Data()[start .. end]);
 	}
 }
 

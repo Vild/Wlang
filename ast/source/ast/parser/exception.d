@@ -25,9 +25,9 @@ public:
 			Token token = tokens[idx - 1];
 			Lexer lexer = token.TheLexer;
 			size_t[2] startPos = lexer.GetLinePos(token.Start);
-			
+
 			size_t lineStart = lexer.GetDataPos([startPos[0], 0]);
-			size_t lineEnd = lexer.GetDataPos([startPos[0]+1, 0]) - 1;
+			size_t lineEnd = lexer.GetDataPos([startPos[0] + 1, 0]) - 1;
 			if (lineStart != 0 && lineEnd == -1)
 				lineEnd = lexer.Data.length - 1;
 
@@ -36,22 +36,23 @@ public:
 			linePointer ~= line;
 			linePointer ~= lexer.Data[lineStart .. lineEnd];
 			linePointer ~= "\n";
-			linePointer ~= to!string(' '.repeat.take(line.length + startPos[1] - 2));
+
+			linePointer ~= to!string(' '.repeat.take(line.length + token.Column + token.Length));
 			linePointer ~= "^";
-			
+			/*
 			if (dif > 0)
 				linePointer ~= to!string('-'.repeat.take(dif - 1));
 			if (dif > 1)
-				linePointer ~= "^";
+				linePointer ~= "^";*/
 			linePointer ~= "\n";
 		}
 
 		Token token = tokens[idx];
 		Lexer lexer = token.TheLexer;
 		size_t[2] startPos = lexer.GetLinePos(token.Start);
-		
+
 		size_t lineStart = lexer.GetDataPos([startPos[0], 0]);
-		size_t lineEnd = lexer.GetDataPos([startPos[0]+1, 0]) - 1;
+		size_t lineEnd = lexer.GetDataPos([startPos[0] + 1, 0]) - 1;
 		if (lineStart != 0 && lineEnd == -1)
 			lineEnd = lexer.Data.length - 1;
 
@@ -61,7 +62,7 @@ public:
 			linePointer ~= line;
 			linePointer ~= lexer.Data[lineStart .. lineEnd];
 			linePointer ~= "\n";
-			linePointer ~= to!string(' '.repeat.take(line.length + startPos[1]));
+			linePointer ~= to!string(' '.repeat.take(line.length + token.Column));
 			linePointer ~= "^";
 
 			if (dif > 0)
@@ -69,20 +70,13 @@ public:
 			if (dif > 1)
 				linePointer ~= "^";
 		}
-	
 
-
-
-
-		msg = format("\n%s\nStarting at line %d:%d, ending at %d:%d.\nToken: %s\n%s",
-			error,
-			startPos[0], startPos[1],
-			startPos[0]+token.Length, startPos[1],
-			token,
-			linePointer);
+		msg = format("\n%s\nStarting at line %d:%d, ending at %d:%d.\nToken: %s\n%s", error, startPos[0], startPos[1],
+				startPos[0] + token.Length, startPos[1], token, linePointer);
 	}
+
 private:
-	
+
 }
 
 class UnknownStatementException : ParserException {
@@ -95,6 +89,6 @@ public:
 class ExpectedException(expected) : ParserException {
 public:
 	this(Parser parser, Array!Token token, size_t idx, string f = __FILE__, size_t l = __LINE__) {
-		super(parser, token, idx, "Expected '" ~ expected.stringof ~ "' got " ~ token[idx].toString, f, l, true);
+		super(parser, token, idx, "Expected '" ~ expected.stringof ~ "' got " ~ token[idx].toString, f, l, is(expected == EndToken));
 	}
 }
