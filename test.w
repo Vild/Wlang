@@ -36,3 +36,19 @@ class testClassWithParent : Object {
 	bool t2;
 	string t3;
 }
+
+class testClassWithParent : Object {
+	int t1;
+	bool t2;
+	string t3;
+}
+
+
+
+
+
+
+
+
+
+

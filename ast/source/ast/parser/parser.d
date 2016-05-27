@@ -4,7 +4,7 @@ import ast.lexer.lexer;
 import ast.lexer.token;
 import ast.parser.exception;
 import ast.parser.statement;
-import des.log;
+import wlang.io.log;
 import std.container.array;
 import std.traits;
 import std.typecons;
@@ -36,16 +36,17 @@ private:
 	void run() {
 		import std.stdio;
 
-		logger.info("Start with parser!");
+		Log log = Log.MainLogger();
+		log.Info("Start with parser!");
 		if (!process(root)) {
-			logger.error("Failed parsing!");
+			log.Error("Failed parsing!");
 			return;
 		}
 		writeln();
 		if (current >= tokens.length)
 			processedAll = true;
 
-		logger.info("End of parser!");
+		log.Info("End of parser!");
 	}
 
 	bool process(Scope curScope) {
@@ -305,7 +306,6 @@ private:
 	bool has(pattern...)() {
 		if (current >= tokens.length)
 			return false;
-
 		mixin(genericPeekImpl!("return false;", "", pattern));
 		return true;
 	}
@@ -345,7 +345,8 @@ private:
 					static assert(hasMember!(p, "isType") && __traits(compiles, (cast(p*)null).isType(pattern[i + 1])),
 							format("The type '%s' hasn't got a function called isType for the type of '%s'. Please fix!",
 								p.stringof, typeof(pattern[i + 1]).stringof));
-					mixin(`ret ~= format("if (!cast(%s)tokens[current+%d] || !(cast(%s)tokens[current+%d]).isType(%s)) "~onFail~"\n", p.stringof, idx, p.stringof, idx, pattern[i+1].stringof, ` ~ extraData ~ `);`);
+					mixin(`ret ~= format("if (!cast(%s)tokens[current+%d] || !(cast(%s)tokens[current+%d]).isType(%s)) "~onFail~"\n", p.stringof, idx, p.stringof, idx, "` ~ typeof(
+							pattern[i + 1]).stringof ~ "." ~ pattern[i + 1].stringof ~ `", ` ~ extraData ~ `);`);
 				} else
 					mixin(`ret ~= format("if (!cast(%s)tokens[current+%d]) "~onFail~"\n", p.stringof, idx, ` ~ extraData ~ `);`);
 				idx++;

@@ -5,8 +5,8 @@ __dummy.html
 *.obj
 dub.selections.json
 dub.userprefs
-wlang
 wc
 *.a
 *.lex.json
 *.par.json
+.vscode/

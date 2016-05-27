@@ -2,7 +2,7 @@ module ast.lexer.lexer;
 
 import ast.lexer.exception;
 import ast.lexer.token;
-import des.log;
+import wlang.io.log;
 import std.container;
 import std.regex;
 import std.array;
@@ -75,19 +75,20 @@ private:
 	void process() {
 		import std.stdio;
 
-		logger.info("Start with lexing!");
+		Log log = Log.MainLogger();
+		log.Info("Start with lexing!");
 		size_t lastCurrent = current;
 		while (current < data.length) {
 			lastCurrent = current;
 			write("\rCurrent token: ", current + 1, " out of ", data.length);
 			parseToken();
 			if (current == lastCurrent) {
-				logger.error("\rFailed to parse token ", current + 1, " --> '", data[current], "'");
+				log.Error("\rFailed to parse token ", current + 1, " --> '", data[current], "'");
 				break;
 			}
 		}
 		writeln();
-		logger.info("End of lexing!");
+		log.Info("End of lexing!");
 	}
 
 	void parseToken() {
@@ -216,7 +217,7 @@ private:
 	}
 
 	bool addAttribute() {
-		if (add!(`^@[\p{L}_][\p{L}_0123456789]*`, AttributeToken)(AttributeType.SPECIAL)) {
+		if (add!(`^@[\p{L}\p{So}_][\p{L}\p{So}_0123456789]*`, AttributeToken)(AttributeType.SPECIAL)) {
 		} else {
 			auto result = matchFirst(data[current .. $], ctRegex!(`^[\p{L}_][\p{L}_0123456789]*`));
 			if (result.empty)
@@ -312,38 +313,7 @@ private:
 	}
 
 	bool addSymbol() {
-		enum blocks = `\p{L}` ~ //`\p{InBasic_Latin}` ~
-				`\p{InLatin-1_Supplement}` ~ `\p{InLatin_Extended-A}` ~ `\p{InLatin_Extended-B}`
-				~ `\p{InIPA_Extensions}` ~ `\p{InSpacing_Modifier_Letters}` ~ `\p{InCombining_Diacritical_Marks}`
-				~ `\p{InGreek_and_Coptic}` ~ `\p{InCyrillic}` ~ //`\p{InCyrillic_Supplementary}` ~
-				`\p{InArmenian}`
-				~ `\p{InHebrew}` ~ `\p{InArabic}` ~ `\p{InSyriac}` ~ `\p{InThaana}` ~ `\p{InDevanagari}` ~ `\p{InBengali}`
-				~ `\p{InGurmukhi}` ~ `\p{InGujarati}` ~ `\p{InOriya}` ~ `\p{InTamil}`
-				~ `\p{InTelugu}` ~ `\p{InKannada}` ~ `\p{InMalayalam}` ~ `\p{InSinhala}` ~ `\p{InThai}` ~ `\p{InLao}`
-				~ `\p{InTibetan}` ~ `\p{InMyanmar}` ~ `\p{InGeorgian}` ~ `\p{InHangul_Jamo}` ~ `\p{InEthiopic}`
-				~ `\p{InCherokee}` ~ `\p{InUnified_Canadian_Aboriginal_Syllabics}` ~ `\p{InOgham}` ~ `\p{InRunic}`
-				~ `\p{InTagalog}` ~ `\p{InHanunoo}` ~ `\p{InBuhid}` ~ `\p{InTagbanwa}` ~ `\p{InKhmer}` ~ `\p{InMongolian}`
-				~ `\p{InLimbu}` ~ `\p{InTai_Le}` ~ `\p{InKhmer_Symbols}`
-				~ `\p{InPhonetic_Extensions}` ~ `\p{InLatin_Extended_Additional}` ~ `\p{InGreek_Extended}`
-				~ //`\p{InGeneral_Punctuation}` ~
-				`\p{InSuperscripts_and_Subscripts}` ~ `\p{InCurrency_Symbols}` ~ `\p{InCombining_Diacritical_Marks_for_Symbols}`
-				~ `\p{InLetterlike_Symbols}` ~ `\p{InNumber_Forms}` ~ `\p{InArrows}` ~ `\p{InMathematical_Operators}`
-				~ `\p{InMiscellaneous_Technical}` ~ `\p{InControl_Pictures}` ~ `\p{InOptical_Character_Recognition}`
-				~ `\p{InEnclosed_Alphanumerics}` ~ `\p{InBox_Drawing}` ~ `\p{InBlock_Elements}` ~ `\p{InGeometric_Shapes}`
-				~ `\p{InMiscellaneous_Symbols}` ~ `\p{InDingbats}` ~ `\p{InMiscellaneous_Mathematical_Symbols-A}` ~ `\p{InSupplemental_Arrows-A}`
-				~ `\p{InBraille_Patterns}` ~ `\p{InSupplemental_Arrows-B}` ~ `\p{InMiscellaneous_Mathematical_Symbols-B}`
-				~ `\p{InSupplemental_Mathematical_Operators}` ~ `\p{InMiscellaneous_Symbols_and_Arrows}` ~ `\p{InCJK_Radicals_Supplement}`
-				~ `\p{InKangxi_Radicals}` ~ `\p{InIdeographic_Description_Characters}` ~ `\p{InCJK_Symbols_and_Punctuation}`
-				~ `\p{InHiragana}` ~ `\p{InKatakana}` ~ `\p{InBopomofo}` ~ `\p{InHangul_Compatibility_Jamo}` ~ `\p{InKanbun}`
-				~ `\p{InBopomofo_Extended}` ~ `\p{InKatakana_Phonetic_Extensions}` ~ `\p{InEnclosed_CJK_Letters_and_Months}`
-				~ `\p{InCJK_Compatibility}` ~ `\p{InCJK_Unified_Ideographs_Extension_A}` ~ `\p{InYijing_Hexagram_Symbols}`
-				~ `\p{InCJK_Unified_Ideographs}` ~ `\p{InYi_Syllables}` ~ `\p{InYi_Radicals}` ~ `\p{InHangul_Syllables}`
-				~ `\p{InHigh_Surrogates}` ~ `\p{InHigh_Private_Use_Surrogates}` ~ `\p{InLow_Surrogates}` ~ `\p{InPrivate_Use_Area}`
-				~ `\p{InCJK_Compatibility_Ideographs}` ~ `\p{InAlphabetic_Presentation_Forms}` ~ `\p{InArabic_Presentation_Forms-A}`
-				~ `\p{InVariation_Selectors}` ~ `\p{InCombining_Half_Marks}` ~ `\p{InCJK_Compatibility_Forms}`
-				~ `\p{InSmall_Form_Variants}` ~ `\p{InArabic_Presentation_Forms-B}`
-				~ `\p{InHalfwidth_and_Fullwidth_Forms}` ~ `\p{InSpecials}`;
-		auto result = matchFirst(data[current .. $], ctRegex!(`^[` ~ blocks ~ `_][` ~ blocks ~ `_0123456789]*`));
+		auto result = matchFirst(data[current .. $], ctRegex!(`^[\p{L}\p{So}_][\p{L}\p{So}_0123456789]*`));
 		if (result.empty)
 			return false;
 		auto t = new SymbolToken(this, current, current + result[0].length, column);

@@ -4,19 +4,7 @@
 	"description": "The W language parser, compiler and runtime.",
 	"copyright": "Copyright © 2015, Dan Printzell",
 	"authors": ["Dan Printzell"],
-	"dependencies": {
-		"wlang:compiler": "*"
-	},
-	"subPackages": [
-		{
-			"name": "ast",
-			"targetType": "library",
-			"sourcePaths": ["ast/source"],
-			"importPaths": ["ast/source"],
-			"dependencies": {
-				"deslog": "~>0.2.0"
-			}
-		},
+	"configurations": [
 		{
 			"name": "compiler",
 			"targetType": "executable",
@@ -24,6 +12,7 @@
 			"sourcePaths": ["compiler/source"],
 			"importPaths": ["compiler/source"],
 			"dependencies": {
+				"wlang:common": "*",
 				"wlang:ast": "*"
 			}
 		},
@@ -34,7 +23,27 @@
 			"sourcePaths": ["vm/source"],
 			"importPaths": ["vm/source"],
 			"dependencies": {
+				"wlang:common": "*",
 				"wlang:ast": "*"
+			}
+		}
+	],
+	"subPackages": [
+		{
+			"name": "common",
+			"targetType": "library",
+			"sourcePaths": ["common/source"],
+			"importPaths": ["common/source"],
+			"dependencies": {
+			}
+		},
+		{
+			"name": "ast",
+			"targetType": "library",
+			"sourcePaths": ["ast/source"],
+			"importPaths": ["ast/source"],
+			"dependencies": {
+				"wlang:common": "*"
 			}
 		}
 	]
